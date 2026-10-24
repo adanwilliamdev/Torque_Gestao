@@ -400,6 +400,176 @@ class ApiFlowIT extends AbstractIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    // ------------------------------------------------------------------ correções de regras de negócio
+
+    private void mudarStatus(String token, String orderId, String status) throws Exception {
+        send("PATCH", "/api/service-orders/" + orderId + "/status", token, Map.of("status", status))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void cancelarOsDevolveAsPecasAoEstoque() throws Exception {
+        String admin = adminToken();
+        String orderId = novaOrdem(admin, null).get("id").asText();
+        String partId = novaPeca(admin, 10, "50.00").get("id").asText();
+
+        send("POST", "/api/service-orders/" + orderId + "/items", admin, Map.of("partId", partId, "quantity", 4))
+                .andExpect(status().isCreated());
+        send("GET", "/api/inventory/parts/" + partId, admin, null).andExpect(jsonPath("$.stockQuantity", is(6)));
+
+        mudarStatus(admin, orderId, "CANCELADA");
+
+        send("GET", "/api/inventory/parts/" + partId, admin, null).andExpect(jsonPath("$.stockQuantity", is(10)));
+        // cadastro inicial + saída da OS + estorno do cancelamento
+        send("GET", "/api/inventory/parts/" + partId + "/movements", admin, null)
+                .andExpect(jsonPath("$.length()", is(3)));
+    }
+
+    @Test
+    void repetirOMesmoStatusRetorna400() throws Exception {
+        String admin = adminToken();
+        String id = novaOrdem(admin, null).get("id").asText();
+
+        send("PATCH", "/api/service-orders/" + id + "/status", admin, Map.of("status", "CRIADA"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("A ordem de serviço já está com o status Criada")));
+    }
+
+    @Test
+    void mecanicoNaoAprovaNemCancelaAOs() throws Exception {
+        String admin = adminToken();
+        User mecUser = createUser(Role.MECHANIC);
+        JsonNode mechanic = created("/api/mechanics", admin, Map.of("name", "Zé", "userId", mecUser.getId().toString()));
+        String id = novaOrdem(admin, mechanic.get("id").asText()).get("id").asText();
+        String token = tokenFor(mecUser);
+
+        // executar o serviço é com o mecânico...
+        mudarStatus(token, id, "EM_DIAGNOSTICO");
+        mudarStatus(token, id, "AGUARDANDO_APROVACAO");
+
+        // ...mas aprovar ou cancelar não é
+        send("PATCH", "/api/service-orders/" + id + "/status", token, Map.of("status", "APROVADA"))
+                .andExpect(status().isForbidden());
+        send("PATCH", "/api/service-orders/" + id + "/status", token, Map.of("status", "CANCELADA"))
+                .andExpect(status().isForbidden());
+        send("GET", "/api/service-orders/" + id, admin, null).andExpect(jsonPath("$.status", is("AGUARDANDO_APROVACAO")));
+    }
+
+    @Test
+    void naoSeAtribuiMecanicoAOsCancelada() throws Exception {
+        String admin = adminToken();
+        String id = novaOrdem(admin, null).get("id").asText();
+        String mechanicId = created("/api/mechanics", admin, Map.of("name", "Zé")).get("id").asText();
+        mudarStatus(admin, id, "CANCELADA");
+
+        send("PATCH", "/api/service-orders/" + id + "/mechanic?mechanicId=" + mechanicId, admin, null)
+                .andExpect(status().isBadRequest());
+    }
+
+    private JsonNode orcamentoDaOs(String token, JsonNode order) throws Exception {
+        return created("/api/budgets", token, Map.of(
+                "clientId", order.get("clientId").asText(),
+                "vehicleId", order.get("vehicleId").asText(),
+                "serviceOrderId", order.get("id").asText(),
+                "totalAmount", "300.00"));
+    }
+
+    @Test
+    void aprovarOrcamentoAprovaAOsVinculada() throws Exception {
+        String admin = adminToken();
+        JsonNode order = novaOrdem(admin, null);
+        String orderId = order.get("id").asText();
+        mudarStatus(admin, orderId, "EM_DIAGNOSTICO");
+        mudarStatus(admin, orderId, "AGUARDANDO_APROVACAO");
+        String budgetId = orcamentoDaOs(admin, order).get("id").asText();
+
+        send("PATCH", "/api/budgets/" + budgetId + "/approve", admin, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("APROVADO")));
+
+        send("GET", "/api/service-orders/" + orderId, admin, null).andExpect(jsonPath("$.status", is("APROVADA")));
+    }
+
+    @Test
+    void recusarOrcamentoCancelaAOsEDevolveAsPecas() throws Exception {
+        String admin = adminToken();
+        JsonNode order = novaOrdem(admin, null);
+        String orderId = order.get("id").asText();
+        String partId = novaPeca(admin, 10, "50.00").get("id").asText();
+        send("POST", "/api/service-orders/" + orderId + "/items", admin, Map.of("partId", partId, "quantity", 3))
+                .andExpect(status().isCreated());
+        mudarStatus(admin, orderId, "EM_DIAGNOSTICO");
+        mudarStatus(admin, orderId, "AGUARDANDO_APROVACAO");
+        String budgetId = orcamentoDaOs(admin, order).get("id").asText();
+
+        send("PATCH", "/api/budgets/" + budgetId + "/reject", admin, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("RECUSADO")));
+
+        send("GET", "/api/service-orders/" + orderId, admin, null).andExpect(jsonPath("$.status", is("CANCELADA")));
+        send("GET", "/api/inventory/parts/" + partId, admin, null).andExpect(jsonPath("$.stockQuantity", is(10)));
+    }
+
+    @Test
+    void orcamentoNaoEhDecididoSeAOsNaoEstiverAguardandoAprovacao() throws Exception {
+        String admin = adminToken();
+        JsonNode order = novaOrdem(admin, null); // continua CRIADA
+        String budgetId = orcamentoDaOs(admin, order).get("id").asText();
+
+        send("PATCH", "/api/budgets/" + budgetId + "/approve", admin, null).andExpect(status().isBadRequest());
+
+        // a transação foi revertida: o orçamento segue pendente
+        send("GET", "/api/budgets/" + budgetId, admin, null).andExpect(jsonPath("$.status", is("PENDENTE")));
+    }
+
+    // ------------------------------------------------------------------ paginação
+
+    @Test
+    void listagemDeClientesEhPaginadaEFiltravelPorNome() throws Exception {
+        String admin = adminToken();
+        String marca = "Paginado-" + UUID.randomUUID();
+        for (int i = 0; i < 3; i++) {
+            created("/api/clients", admin, Map.of("name", marca + "-" + i));
+        }
+
+        send("GET", "/api/clients?name=" + marca + "&size=2&page=0&sort=name,asc", admin, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()", is(2)))
+                .andExpect(jsonPath("$.content[0].name", is(marca + "-0")))
+                .andExpect(jsonPath("$.totalElements", is(3)))
+                .andExpect(jsonPath("$.totalPages", is(2)));
+        send("GET", "/api/clients?name=" + marca + "&size=2&page=1&sort=name,asc", admin, null)
+                .andExpect(jsonPath("$.content.length()", is(1)));
+    }
+
+    @Test
+    void ordenacaoPorCampoDesconhecidoCaiNoPadraoEmVezDeErro500() throws Exception {
+        String admin = adminToken();
+        send("GET", "/api/clients?sort=cpf,desc", admin, null).andExpect(status().isOk());
+        send("GET", "/api/inventory/parts?sort=campoInexistente", admin, null).andExpect(status().isOk());
+        send("GET", "/api/service-orders?sort=campoInexistente", admin, null).andExpect(status().isOk());
+    }
+
+    @Test
+    void tamanhoDePaginaEhLimitado() throws Exception {
+        send("GET", "/api/clients?size=100000", adminToken(), null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.size", is(100)));
+    }
+
+    @Test
+    void listagemDeOrdensPaginaEFiltraPorStatus() throws Exception {
+        String admin = adminToken();
+        String id = novaOrdem(admin, null).get("id").asText();
+        novaOrdem(admin, null);
+        mudarStatus(admin, id, "CANCELADA");
+
+        send("GET", "/api/service-orders?status=CANCELADA&size=1", admin, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()", is(1)))
+                .andExpect(jsonPath("$.content[0].status", is("CANCELADA")));
+    }
+
     @Test
     void healthEhPublico() throws Exception {
         mvc.perform(get("/api/health"))

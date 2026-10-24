@@ -23,16 +23,19 @@ public class BudgetService {
     private final ServiceOrderRepository orders;
     private final ClientService clientService;
     private final VehicleService vehicleService;
+    private final ServiceOrderService serviceOrderService;
 
     public BudgetService(
             BudgetRepository budgets,
             ServiceOrderRepository orders,
             ClientService clientService,
-            VehicleService vehicleService) {
+            VehicleService vehicleService,
+            ServiceOrderService serviceOrderService) {
         this.budgets = budgets;
         this.orders = orders;
         this.clientService = clientService;
         this.vehicleService = vehicleService;
+        this.serviceOrderService = serviceOrderService;
     }
 
     public Budget getBudget(UUID id) {
@@ -80,18 +83,26 @@ public class BudgetService {
         return BudgetResponse.from(budget);
     }
 
-    public BudgetResponse approve(UUID id) {
-        return decide(id, BudgetStatus.APROVADO, "aprovados");
+    public BudgetResponse approve(UUID id, UUID userId) {
+        return decide(id, BudgetStatus.APROVADO, "aprovados", userId);
     }
 
-    public BudgetResponse reject(UUID id) {
-        return decide(id, BudgetStatus.RECUSADO, "recusados");
+    public BudgetResponse reject(UUID id, UUID userId) {
+        return decide(id, BudgetStatus.RECUSADO, "recusados", userId);
     }
 
-    private BudgetResponse decide(UUID id, BudgetStatus newStatus, String verb) {
+    /**
+     * Decide o orçamento e propaga o resultado à OS vinculada (se houver), na mesma transação:
+     * se a OS não puder reagir (ex.: não está aguardando aprovação), nada é alterado.
+     */
+    private BudgetResponse decide(UUID id, BudgetStatus newStatus, String verb, UUID userId) {
         Budget budget = getBudget(id);
         if (budget.getStatus() != BudgetStatus.PENDENTE) {
             throw new BusinessException("Apenas orçamentos pendentes podem ser " + verb);
+        }
+        if (budget.getServiceOrderId() != null) {
+            serviceOrderService.applyBudgetDecision(
+                    budget.getServiceOrderId(), newStatus == BudgetStatus.APROVADO, userId);
         }
         budget.setStatus(newStatus);
         budgets.saveAndFlush(budget);

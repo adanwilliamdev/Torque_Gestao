@@ -4,6 +4,8 @@ import com.torquegestao.domain.BudgetStatus;
 import com.torquegestao.dto.BudgetRequest;
 import com.torquegestao.dto.BudgetResponse;
 import com.torquegestao.security.Access;
+import com.torquegestao.security.AppUserDetails;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.torquegestao.service.BudgetService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -64,13 +66,13 @@ public class BudgetApiController {
 
     @PatchMapping("/{id}/approve")
     @PreAuthorize(Access.BUDGET_DECIDE)
-    public BudgetResponse approve(@PathVariable UUID id) {
-        return budgets.approve(id);
+    public BudgetResponse approve(@PathVariable UUID id, @AuthenticationPrincipal AppUserDetails user) {
+        return budgets.approve(id, user.getId());
     }
 
     @PatchMapping("/{id}/reject")
     @PreAuthorize(Access.BUDGET_DECIDE)
-    public BudgetResponse reject(@PathVariable UUID id) {
-        return budgets.reject(id);
+    public BudgetResponse reject(@PathVariable UUID id, @AuthenticationPrincipal AppUserDetails user) {
+        return budgets.reject(id, user.getId());
     }
 }

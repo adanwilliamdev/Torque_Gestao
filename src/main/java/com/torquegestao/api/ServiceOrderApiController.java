@@ -2,6 +2,7 @@ package com.torquegestao.api;
 
 import com.torquegestao.domain.ServiceOrderStatus;
 import com.torquegestao.dto.LaborAmountRequest;
+import com.torquegestao.dto.PageResponse;
 import com.torquegestao.dto.ServiceOrderItemRequest;
 import com.torquegestao.dto.ServiceOrderRequest;
 import com.torquegestao.dto.ServiceOrderResponse;
@@ -13,6 +14,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -51,8 +54,10 @@ public class ServiceOrderApiController {
 
     @GetMapping
     @PreAuthorize(Access.ORDER_STAFF)
-    public List<ServiceOrderResponse> list() {
-        return orders.list();
+    public PageResponse<ServiceOrderResponse> list(
+            @RequestParam(required = false) ServiceOrderStatus status,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return orders.page(status, pageable);
     }
 
     /** A listagem geral é negada ao MECHANIC; esta devolve só as ordens atribuídas a ele. */

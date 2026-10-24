@@ -1,9 +1,11 @@
 package com.torquegestao.service;
 
 import java.time.Duration;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 
 /**
@@ -16,6 +18,19 @@ import org.springframework.stereotype.Service;
 public class CacheService {
 
     private static final Logger log = LoggerFactory.getLogger(CacheService.class);
+
+    /**
+     * INCR + EXPIRE em uma única operação atômica no Redis. Feitos em duas chamadas, uma queda entre
+     * elas deixaria a chave sem TTL e o bloqueio valeria para sempre. O TTL também é refeito se, por
+     * algum motivo, a chave existir sem expiração.
+     */
+    private static final DefaultRedisScript<Long> RATE_LIMIT_SCRIPT = new DefaultRedisScript<>("""
+            local count = redis.call('INCR', KEYS[1])
+            if count == 1 or redis.call('TTL', KEYS[1]) < 0 then
+              redis.call('EXPIRE', KEYS[1], tonumber(ARGV[1]))
+            end
+            return count
+            """, Long.class);
 
     private final StringRedisTemplate redis;
 
@@ -51,10 +66,7 @@ public class CacheService {
     /** Conta uma tentativa e devolve {@code true} se o limite da janela já foi excedido. */
     public boolean hitRateLimit(String key, int limit, int windowSeconds) {
         try {
-            Long count = redis.opsForValue().increment(key);
-            if (count != null && count == 1L) {
-                redis.expire(key, Duration.ofSeconds(windowSeconds));
-            }
+            Long count = redis.execute(RATE_LIMIT_SCRIPT, List.of(key), String.valueOf(windowSeconds));
             return count != null && count > limit;
         } catch (RuntimeException ex) {
             log.warn("Redis indisponível (rate limit): {}", ex.getMessage());

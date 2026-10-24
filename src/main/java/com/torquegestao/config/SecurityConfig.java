@@ -88,7 +88,6 @@ public class SecurityConfig {
                                 "/api/auth/login",
                                 "/api/auth/refresh",
                                 "/api/auth/logout",
-                                "/api/auth/register",
                                 "/api/swagger-ui",
                                 "/api/swagger-ui/**",
                                 "/api/openapi.json",

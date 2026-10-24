@@ -115,21 +115,19 @@ Acesse a aplicação em:
 
 **http://localhost:8080**
 
-Na primeira inicialização, o sistema cria um administrador inicial conforme as variáveis de configuração.
+Na primeira inicialização, o sistema cria um administrador inicial (`admin@torquegestao.com`).
 
-| Configuração | Valor padrão |
-|---|---|
-| E-mail | `admin@mecanicaplus.com` |
-| Senha | `admin123` |
+- Se `SEED_ADMIN_PASSWORD` **não** for definida, uma **senha aleatória é gerada e exibida uma única vez no log** da aplicação (`docker compose logs app | grep "Senha inicial"`). Não existe senha padrão conhecida.
+- Para definir a sua: `SEED_ADMIN_PASSWORD=minha-senha-forte docker compose up --build`.
 
-> **Segurança:** essas credenciais são destinadas ao desenvolvimento. Altere a senha inicial por meio de `SEED_ADMIN_PASSWORD` e configure um segredo JWT forte antes de utilizar a aplicação em produção.
+> **Segurança:** em produção (`ENVIRONMENT=production`) a aplicação **não cria** o administrador sem uma `SEED_ADMIN_PASSWORD` forte e **recusa iniciar** com o `JWT_SECRET` de exemplo.
 
 ### Opção 2: execução local
 
 Crie o banco de dados:
 
 ```bash
-createdb mecanica
+createdb torque
 ```
 
 Configure as variáveis de ambiente conforme o arquivo `.env.example` e inicie a aplicação:
@@ -153,6 +151,22 @@ As migrações do banco de dados são executadas automaticamente pelo Flyway dur
 
 A API disponibiliza operações para autenticação, usuários, clientes, veículos, mecânicos, ordens de serviço, orçamentos e estoque, conforme os endpoints implementados no projeto.
 
+### Paginação
+
+As listagens principais (`GET /api/service-orders`, `/api/clients` e `/api/inventory/parts`) são paginadas e devolvem:
+
+```json
+{ "content": [ ... ], "page": 0, "size": 20, "totalElements": 134, "totalPages": 7 }
+```
+
+| Parâmetro | Descrição |
+|---|---|
+| `page` | Página (começa em 0) |
+| `size` | Itens por página (padrão 20, máximo 100) |
+| `sort` | Ex.: `sort=name,asc`. Apenas campos permitidos; um campo inválido volta ao padrão (`createdAt desc`) |
+| `name` | Filtro por nome (clientes e peças) |
+| `status` | Filtro por status (ordens de serviço) |
+
 ## 👥 Perfis e permissões
 
 O sistema utiliza controle de acesso baseado em perfis para restringir operações conforme a responsabilidade de cada usuário.
@@ -164,7 +178,28 @@ O sistema utiliza controle de acesso baseado em perfis para restringir operaçõ
 | `RECEPTIONIST` | Gestão de clientes e veículos, abertura de ordens e orçamentos e consulta de mecânicos |
 | `MECHANIC` | Consulta e atualização das ordens atribuídas, incluindo lançamento de peças e mão de obra |
 
-O autocadastro por `POST /api/auth/register` cria exclusivamente usuários com perfil `RECEPTIONIST`. A criação de usuários com outros perfis é restrita a administradores, por meio de `POST /api/auth/users`.
+Não existe autocadastro: por ser um sistema interno da oficina, **contas só são criadas por um administrador**, via `POST /api/auth/users`.
+
+O `MECHANIC` executa o serviço (diagnóstico, execução e finalização das ordens atribuídas a ele), mas **não aprova nem cancela** ordens de serviço: essas decisões ficam com `ADMIN` e `MANAGER`.
+
+## 🗄️ Modelo de dados
+
+```mermaid
+erDiagram
+    CLIENTS ||--o{ VEHICLES : possui
+    CLIENTS ||--o{ SERVICE_ORDERS : solicita
+    VEHICLES ||--o{ SERVICE_ORDERS : recebe
+    MECHANICS ||--o{ SERVICE_ORDERS : executa
+    USERS ||--o| MECHANICS : "perfil de"
+    SERVICE_ORDERS ||--o{ SERVICE_ORDER_ITEMS : contem
+    PARTS ||--o{ SERVICE_ORDER_ITEMS : "usada em"
+    PARTS ||--o{ INVENTORY_MOVEMENTS : movimenta
+    USERS ||--o{ INVENTORY_MOVEMENTS : registra
+    SERVICE_ORDERS ||--o| BUDGETS : "orçada por"
+    CLIENTS ||--o{ BUDGETS : recebe
+    VEHICLES ||--o{ BUDGETS : refere
+    USERS ||--o{ REFRESH_TOKENS : possui
+```
 
 ## 🔄 Regras de negócio
 
@@ -186,15 +221,23 @@ EM_EXECUCAO
 FINALIZADA
 ```
 
-Qualquer etapa ainda aberta pode ser direcionada para `CANCELADA`, respeitando as regras implementadas. Não é permitido pular etapas do fluxo.
+Qualquer etapa ainda aberta pode ser direcionada para `CANCELADA`. Não é permitido pular etapas do fluxo, nem repetir o status atual (isso reiniciaria os carimbos `startedAt`/`completedAt`).
+
+### Orçamentos e ordens de serviço
+
+Um orçamento pode ser vinculado a uma OS, e a decisão sobre ele se reflete na OS dentro da mesma transação:
+
+- **Aprovar** o orçamento leva a OS de `AGUARDANDO_APROVACAO` para `APROVADA`.
+- **Recusar** o orçamento **cancela** a OS e devolve as peças ao estoque.
+- Se a OS vinculada não estiver aguardando aprovação, a decisão é recusada (HTTP 400) e nada é alterado.
 
 ### Faturamento e peças
 
 - A inclusão de peças em uma ordem de serviço reduz o estoque.
 - O preço de venda da peça é registrado no momento de sua utilização.
 - O total da ordem é recalculado conforme os lançamentos de peças e mão de obra.
-- A remoção de uma peça estorna a quantidade correspondente ao estoque.
-- Ordens finalizadas ou canceladas não permitem novas alterações de peças ou mão de obra.
+- A remoção de uma peça, ou o **cancelamento da OS**, estorna as quantidades correspondentes ao estoque (cada estorno gera uma movimentação rastreável).
+- Ordens finalizadas ou canceladas não permitem novas alterações de peças, mão de obra ou mecânico atribuído.
 
 ### Integridade do estoque
 
@@ -215,39 +258,34 @@ As principais variáveis de ambiente estão documentadas em [`.env.example`](.en
 
 | Variável | Padrão | Finalidade |
 |---|---|---|
-| `DB_URL` | `jdbc:postgresql://localhost:5432/mecanica` | Conexão com o PostgreSQL |
+| `DB_URL` | `jdbc:postgresql://localhost:5432/torque` | Conexão com o PostgreSQL |
 | `DB_USER` | `postgres` | Usuário do banco |
 | `DB_PASSWORD` | `postgres` | Senha do banco |
 | `REDIS_HOST` | `localhost` | Endereço do Redis |
 | `REDIS_PORT` | `6379` | Porta do Redis |
-| `JWT_SECRET` | Placeholder | Segredo usado na assinatura de tokens |
+| `JWT_SECRET` | Placeholder (só dev) | Segredo usado na assinatura de tokens |
+| `JWT_EXPIRATION_MS` | `900000` (15 min) | Validade do access token; a sessão é renovada via refresh token (7 dias, rotativo) |
 | `ENVIRONMENT` | `development` | Ambiente de execução |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:8080` | Origens permitidas para a API |
-| `SEED_ADMIN_EMAIL` | `admin@mecanicaplus.com` | E-mail do administrador inicial |
-| `SEED_ADMIN_PASSWORD` | `admin123` | Senha inicial do administrador |
+| `SEED_ADMIN_EMAIL` | `admin@torquegestao.com` | E-mail do administrador inicial |
+| `SEED_ADMIN_PASSWORD` | vazio | Senha inicial. Vazio = gera uma aleatória e a exibe uma vez no log (não em produção) |
 | `APP_TIMEZONE` | `America/Sao_Paulo` | Fuso horário da aplicação |
 
-Em produção, configure `ENVIRONMENT=production` e um `JWT_SECRET` forte, com pelo menos 32 caracteres. O administrador inicial só é criado nesse ambiente quando `SEED_ADMIN_PASSWORD` é diferente da senha padrão.
+Em produção, configure `ENVIRONMENT=production` e um `JWT_SECRET` forte, com pelo menos 32 caracteres (`openssl rand -base64 48`). Nesse ambiente o administrador inicial só é criado se `SEED_ADMIN_PASSWORD` for definida com uma senha forte.
 
-Não utilize as credenciais de desenvolvimento em ambientes públicos.
+O limite de tentativas de login usa um script Lua atômico no Redis (contagem e expiração na mesma operação).
 
 ## 🧪 Testes
 
-O projeto possui testes unitários e testes de integração.
+| Tipo | O que cobre | Como rodar |
+|---|---|---|
+| Unitários (JUnit 5 + Mockito) | Regras da OS isoladas: estorno no cancelamento, transições, permissões do mecânico, decisão de orçamento | `mvn test` |
+| Integração (`*IT`, Testcontainers + PostgreSQL) | Fluxos da API de ponta a ponta, segurança por perfil, paginação, interface web | `mvn verify` |
+| Concorrência (`StockConcurrencyIT`) | Baixas simultâneas de estoque nunca geram saldo negativo nem perdem atualizações | `mvn verify` |
 
-**Testes unitários:**
+Os testes de integração exigem Docker. A cobertura (JaCoCo) é gerada em `target/site/jacoco/index.html` após `mvn verify`.
 
-```bash
-mvn test
-```
-
-**Testes de integração:**
-
-```bash
-mvn verify
-```
-
-Os testes de integração utilizam Testcontainers com PostgreSQL e exigem Docker. Os testes unitários não exigem Docker, conforme a configuração do projeto.
+O workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) executa `mvn verify` e o build da imagem Docker a cada push e pull request.
 
 ## 📁 Estrutura do projeto
 
@@ -257,9 +295,11 @@ torque-gestao/
 ├── Dockerfile
 ├── docker-compose.yml
 ├── .env.example
+├── .github/workflows/ci.yml
 └── src/
+    ├── test/                 # unitários (Mockito) e integração (Testcontainers)
     └── main/
-        ├── java/com/mecanicaplus/
+        ├── java/com/torquegestao/
         │   ├── api/          # Controllers REST e tratamento de erros
         │   ├── web/          # Controllers e formulários Thymeleaf
         │   ├── service/      # Regras de negócio
@@ -288,6 +328,3 @@ O Torque Gestão foi desenvolvido para aplicar e demonstrar conhecimentos em:
 - Testes unitários e de integração com Testcontainers.
 - Conteinerização e configuração por variáveis de ambiente.
 
-## 📄 Licença
-
-Consulte a licença definida no repositório para obter informações sobre uso, distribuição e modificação do projeto.

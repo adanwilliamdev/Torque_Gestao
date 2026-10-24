@@ -3,12 +3,17 @@ package com.torquegestao.service;
 import com.torquegestao.domain.Client;
 import com.torquegestao.dto.ClientRequest;
 import com.torquegestao.dto.ClientResponse;
+import com.torquegestao.dto.PageResponse;
 import com.torquegestao.exception.NotFoundException;
 import com.torquegestao.repository.ClientRepository;
 import com.torquegestao.repository.VehicleRepository;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +46,15 @@ public class ClientService {
         return clients.findByActiveTrueOrderByCreatedAtDesc().stream()
                 .map(c -> ClientResponse.from(c, counts.getOrDefault(c.getId(), 0)))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<ClientResponse> page(String name, Pageable pageable) {
+        Pageable safe = Pages.safe(pageable, Set.of("name", "createdAt"), Sort.by(Sort.Direction.DESC, "createdAt"));
+        Map<UUID, Integer> counts = vehicles.vehicleCountsByClient();
+        Page<Client> result = clients.findByActiveTrueAndNameContainingIgnoreCase(
+                name == null ? "" : name.trim(), safe);
+        return PageResponse.from(result.map(c -> ClientResponse.from(c, counts.getOrDefault(c.getId(), 0))));
     }
 
     @Transactional(readOnly = true)

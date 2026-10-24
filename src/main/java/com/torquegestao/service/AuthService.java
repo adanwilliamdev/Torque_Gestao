@@ -8,7 +8,6 @@ import com.torquegestao.dto.CreateUserRequest;
 import com.torquegestao.dto.LoginRequest;
 import com.torquegestao.dto.LoginResponse;
 import com.torquegestao.dto.RefreshTokenRequest;
-import com.torquegestao.dto.RegisterRequest;
 import com.torquegestao.exception.BusinessException;
 import com.torquegestao.exception.NotFoundException;
 import com.torquegestao.exception.TooManyRequestsException;
@@ -115,11 +114,6 @@ public class AuthService {
 
     public void logout(RefreshTokenRequest data) {
         refreshTokens.revokeByHash(hashRefreshToken(data.refreshToken()));
-    }
-
-    /** Autocadastro público: SEMPRE o papel mínimo (não existe campo "role" na requisição). */
-    public void register(RegisterRequest data) {
-        createUser(data.name(), data.email(), data.password(), Role.RECEPTIONIST);
     }
 
     public void createUserByAdmin(CreateUserRequest data) {

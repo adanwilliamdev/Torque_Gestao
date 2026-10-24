@@ -6,6 +6,7 @@ import com.torquegestao.domain.Role;
 import com.torquegestao.domain.ServiceOrder;
 import com.torquegestao.domain.ServiceOrderItem;
 import com.torquegestao.domain.ServiceOrderStatus;
+import com.torquegestao.dto.PageResponse;
 import com.torquegestao.dto.ServiceOrderItemRequest;
 import com.torquegestao.dto.ServiceOrderRequest;
 import com.torquegestao.dto.ServiceOrderResponse;
@@ -18,14 +19,25 @@ import com.torquegestao.security.AppUserDetails;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
 public class ServiceOrderService {
+
+    private static final Set<ServiceOrderStatus> MECHANIC_ALLOWED_STATUSES = EnumSet.of(
+            ServiceOrderStatus.EM_DIAGNOSTICO,
+            ServiceOrderStatus.AGUARDANDO_APROVACAO,
+            ServiceOrderStatus.EM_EXECUCAO,
+            ServiceOrderStatus.FINALIZADA);
 
     private final ServiceOrderRepository orders;
     private final ClientService clientService;
@@ -58,6 +70,16 @@ public class ServiceOrderService {
     @Transactional(readOnly = true)
     public List<ServiceOrderResponse> list() {
         return toResponses(orders.findAllByOrderByCreatedAtDesc());
+    }
+
+    /** Listagem paginada (opcionalmente filtrada por status). Ordena por createdAt desc por padrão. */
+    @Transactional(readOnly = true)
+    public PageResponse<ServiceOrderResponse> page(ServiceOrderStatus status, Pageable pageable) {
+        Pageable safe = Pages.safe(
+                pageable, Set.of("createdAt", "orderNumber", "status", "totalAmount"),
+                Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<ServiceOrder> result = status == null ? orders.findAllBy(safe) : orders.findByStatus(status, safe);
+        return PageResponse.from(result.map(ServiceOrderResponse::from));
     }
 
     /** Ordens atribuídas ao perfil de mecânico do usuário (vazio se ele não tiver perfil). */
@@ -110,24 +132,29 @@ public class ServiceOrderService {
     public ServiceOrderResponse updateStatus(UUID id, StatusUpdateRequest data, AppUserDetails user) {
         ServiceOrder order = getOrder(id);
         assertCanAccess(order, user);
-        validateTransition(order.getStatus(), data.status());
-
-        order.setStatus(data.status());
-        if (data.diagnosis() != null) {
-            order.setDiagnosis(data.diagnosis());
-        }
-        if (data.status() == ServiceOrderStatus.EM_EXECUCAO) {
-            order.setStartedAt(Instant.now());
-        }
-        if (data.status() == ServiceOrderStatus.FINALIZADA) {
-            order.setCompletedAt(Instant.now());
-        }
+        assertRoleCanSetStatus(user, data.status());
+        changeStatus(order, data.status(), data.diagnosis(), user.getId());
         orders.flush();
         return ServiceOrderResponse.from(order);
     }
 
+    /**
+     * Reflete na OS vinculada a decisão sobre o orçamento: aprovar leva a OS para APROVADA; recusar
+     * cancela a OS (devolvendo as peças ao estoque). Só vale enquanto a OS aguarda aprovação.
+     */
+    public void applyBudgetDecision(UUID orderId, boolean approved, UUID userId) {
+        ServiceOrder order = getOrder(orderId);
+        if (order.getStatus() != ServiceOrderStatus.AGUARDANDO_APROVACAO) {
+            throw new BusinessException("A OS vinculada ao orçamento não está aguardando aprovação (status atual: "
+                    + order.getStatus().getLabel() + ")");
+        }
+        changeStatus(order, approved ? ServiceOrderStatus.APROVADA : ServiceOrderStatus.CANCELADA, null, userId);
+        orders.flush();
+    }
+
     public ServiceOrderResponse assignMechanic(UUID id, UUID mechanicId) {
         ServiceOrder order = getOrder(id);
+        assertEditable(order);
         order.setMechanic(mechanicService.getMechanic(mechanicId));
         orders.flush();
         return ServiceOrderResponse.from(order);
@@ -207,6 +234,53 @@ public class ServiceOrderService {
                 .orElseThrow(() -> new ForbiddenException("Usuário não possui um perfil de mecânico vinculado"));
         if (order.getMechanic() == null || !order.getMechanic().getId().equals(mechanic.getId())) {
             throw new ForbiddenException("Esta ordem de serviço não está atribuída a você");
+        }
+    }
+
+    /**
+     * Único ponto onde o status muda. Garante o fluxo, preenche os carimbos de tempo uma só vez e,
+     * ao cancelar, devolve ao estoque as peças já baixadas.
+     */
+    private void changeStatus(ServiceOrder order, ServiceOrderStatus next, String diagnosis, UUID userId) {
+        ServiceOrderStatus current = order.getStatus();
+        if (current == next) {
+            // Reenviar o mesmo status só serve para ajustar o diagnóstico de uma OS ainda aberta;
+            // nunca reinicia carimbos (startedAt/completedAt) nem repete efeitos colaterais.
+            if (diagnosis != null && !current.isClosed()) {
+                order.setDiagnosis(diagnosis);
+                return;
+            }
+            throw new BusinessException("A ordem de serviço já está com o status " + current.getLabel());
+        }
+        validateTransition(current, next);
+
+        order.setStatus(next);
+        if (diagnosis != null) {
+            order.setDiagnosis(diagnosis);
+        }
+        if (next == ServiceOrderStatus.EM_EXECUCAO) {
+            order.setStartedAt(Instant.now());
+        }
+        if (next == ServiceOrderStatus.FINALIZADA) {
+            order.setCompletedAt(Instant.now());
+        }
+        if (next == ServiceOrderStatus.CANCELADA) {
+            restoreStock(order, userId);
+        }
+    }
+
+    private void restoreStock(ServiceOrder order, UUID userId) {
+        for (ServiceOrderItem item : order.getItems()) {
+            inventoryService.addStock(
+                    item.getPart().getId(), item.getQuantity(),
+                    "Estorno por cancelamento da OS " + order.getOrderNumber(), userId, order.getOrderNumber());
+        }
+    }
+
+    /** Mecânico executa o serviço, mas não aprova (decisão do cliente/gerência) nem cancela a OS. */
+    private static void assertRoleCanSetStatus(AppUserDetails user, ServiceOrderStatus next) {
+        if (user.getRole() == Role.MECHANIC && !MECHANIC_ALLOWED_STATUSES.contains(next)) {
+            throw new ForbiddenException("Mecânicos não podem mover a OS para " + next.getLabel());
         }
     }
 

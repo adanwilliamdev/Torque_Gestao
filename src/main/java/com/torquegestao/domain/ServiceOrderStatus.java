@@ -35,7 +35,7 @@ public enum ServiceOrderStatus {
     }
 
     public boolean canTransitionTo(ServiceOrderStatus next) {
-        return this == next || allowedNext().contains(next);
+        return allowedNext().contains(next);
     }
 
     /** Próximo passo "natural" do fluxo (sem cancelamento), ou null se já está encerrada. */

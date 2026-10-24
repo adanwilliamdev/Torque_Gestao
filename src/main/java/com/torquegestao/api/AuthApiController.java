@@ -4,7 +4,6 @@ import com.torquegestao.dto.CreateUserRequest;
 import com.torquegestao.dto.LoginRequest;
 import com.torquegestao.dto.LoginResponse;
 import com.torquegestao.dto.RefreshTokenRequest;
-import com.torquegestao.dto.RegisterRequest;
 import com.torquegestao.security.Access;
 import com.torquegestao.service.AuthService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -45,14 +44,7 @@ public class AuthApiController {
         auth.logout(data);
     }
 
-    /** Autocadastro público. Sempre cria a conta como RECEPTIONIST. */
-    @PostMapping("/register")
-    @ResponseStatus(HttpStatus.CREATED)
-    public void register(@Valid @RequestBody RegisterRequest data) {
-        auth.register(data);
-    }
-
-    /** Criação de usuário com papel arbitrário. Restrito a ADMIN. */
+    /** Única forma de criar usuários via API (não há autocadastro). Restrito a ADMIN. */
     @PostMapping("/users")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize(Access.ADMIN_ONLY)

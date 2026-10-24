@@ -16,7 +16,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.YearMonth;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -70,8 +70,9 @@ public class DashboardService {
             return cached;
         }
 
-        List<MonthlyRevenue> chart = monthlyRevenueChart();
-        String currentLabel = MONTH_LABELS[YearMonth.now(ZoneOffset.UTC).getMonthValue() - 1];
+        ZoneId zone = props.zoneId();
+        List<MonthlyRevenue> chart = monthlyRevenueChart(zone);
+        String currentLabel = MONTH_LABELS[YearMonth.now(zone).getMonthValue() - 1];
         BigDecimal monthlyRevenue = chart.stream()
                 .filter(m -> m.month().equals(currentLabel))
                 .map(MonthlyRevenue::amount)
@@ -94,20 +95,23 @@ public class DashboardService {
         return stats;
     }
 
-    /** Soma o faturado (OS finalizadas) mês a mês nos últimos 6 meses; meses vazios entram com zero. */
-    private List<MonthlyRevenue> monthlyRevenueChart() {
-        YearMonth now = YearMonth.now(ZoneOffset.UTC);
+    /**
+     * Soma o faturado (OS finalizadas) mês a mês nos últimos 6 meses; meses vazios entram com zero.
+     * Os meses seguem o fuso da oficina ({@code app.timezone}), não UTC.
+     */
+    private List<MonthlyRevenue> monthlyRevenueChart(ZoneId zone) {
+        YearMonth now = YearMonth.now(zone);
         List<YearMonth> months = new ArrayList<>();
         for (int i = 5; i >= 0; i--) {
             months.add(now.minusMonths(i));
         }
-        Instant since = months.get(0).atDay(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+        Instant since = months.get(0).atDay(1).atStartOfDay(zone).toInstant();
 
         Map<YearMonth, BigDecimal> totals = new HashMap<>();
         for (Object[] row : orders.completedRevenueSince(since)) {
             Instant completedAt = (Instant) row[0];
             BigDecimal total = (BigDecimal) row[1];
-            YearMonth key = YearMonth.from(completedAt.atZone(ZoneOffset.UTC));
+            YearMonth key = YearMonth.from(completedAt.atZone(zone));
             totals.merge(key, total, BigDecimal::add);
         }
 

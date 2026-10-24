@@ -56,14 +56,23 @@
                             <button type="button" class="menu-btn" aria-label="Ações">⋮</button>
                             <div class="menu-dropdown">
                                 <a th:href="@{/service-orders/{id}/billing(id=${o.id()})}">Faturamento</a>
-                                <th:block sec:authorize="hasAnyRole('ADMIN','MANAGER','MECHANIC')" th:unless="${o.status().closed}">
-                                    <form th:action="@{/service-orders/{id}/advance(id=${o.id()})}" method="post">
-                                        <button type="submit">Avançar status</button>
-                                    </form>
-                                    <form th:action="@{/service-orders/{id}/cancel(id=${o.id()})}" method="post"
-                                          th:attr="data-confirm='Tem certeza que deseja cancelar a OS ' + ${o.orderNumber()} + '?'">
-                                        <button type="submit" class="danger">Cancelar OS</button>
-                                    </form>
+                                <th:block th:unless="${o.status().closed}">
+                                    <!-- ADMIN/MANAGER avançam e cancelam; MECHANIC executa, mas não aprova nem cancela -->
+                                    <th:block sec:authorize="hasAnyRole('ADMIN','MANAGER')">
+                                        <form th:action="@{/service-orders/{id}/advance(id=${o.id()})}" method="post">
+                                            <button type="submit">Avançar status</button>
+                                        </form>
+                                        <form th:action="@{/service-orders/{id}/cancel(id=${o.id()})}" method="post"
+                                              th:attr="data-confirm='Tem certeza que deseja cancelar a OS ' + ${o.orderNumber()} + '?'">
+                                            <button type="submit" class="danger">Cancelar OS</button>
+                                        </form>
+                                    </th:block>
+                                    <th:block sec:authorize="hasRole('MECHANIC')">
+                                        <form th:unless="${o.status().name() == 'AGUARDANDO_APROVACAO'}"
+                                              th:action="@{/service-orders/{id}/advance(id=${o.id()})}" method="post">
+                                            <button type="submit">Avançar status</button>
+                                        </form>
+                                    </th:block>
                                 </th:block>
                             </div>
                         </div>

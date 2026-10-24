@@ -16,6 +16,7 @@ public class AppProperties {
 
     public static final String PLACEHOLDER_JWT_SECRET =
             "troque-este-segredo-em-producao-para-uma-string-longa-e-aleatoria";
+    /** Senha fraca conhecida: recusada em produção. */
     public static final String DEFAULT_ADMIN_PASSWORD = "admin123";
 
     private String environment = "development";
@@ -31,7 +32,7 @@ public class AppProperties {
     @Setter
     public static class Jwt {
         private String secret = PLACEHOLDER_JWT_SECRET;
-        private long expirationMs = 86_400_000L;
+        private long expirationMs = 900_000L; // 15 min; renovação via refresh token
         private int refreshTokenDays = 7;
     }
 
@@ -39,8 +40,9 @@ public class AppProperties {
     @Setter
     public static class Seed {
         private boolean enabled = true;
-        private String adminEmail = "admin@mecanicaplus.com";
-        private String adminPassword = DEFAULT_ADMIN_PASSWORD;
+        private String adminEmail = "admin@torquegestao.com";
+        /** Vazio = gera uma senha aleatória (só fora de produção) e a exibe uma única vez no log. */
+        private String adminPassword = "";
     }
 
     @PostConstruct

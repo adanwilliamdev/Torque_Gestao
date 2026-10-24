@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class ApiErrorWriter implements AuthenticationEntryPoint, AccessDeniedHandler {
 
-    public static final String AUTH_ERROR_ATTRIBUTE = "mecanica.auth.error";
+    public static final String AUTH_ERROR_ATTRIBUTE = "torque.auth.error";
 
     private final ObjectMapper mapper;
 

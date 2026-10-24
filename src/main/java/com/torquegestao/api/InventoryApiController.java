@@ -1,6 +1,7 @@
 package com.torquegestao.api;
 
 import com.torquegestao.dto.MovementResponse;
+import com.torquegestao.dto.PageResponse;
 import com.torquegestao.dto.PartRequest;
 import com.torquegestao.dto.PartResponse;
 import com.torquegestao.security.Access;
@@ -12,6 +13,8 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -47,8 +50,9 @@ public class InventoryApiController {
     }
 
     @GetMapping("/parts")
-    public List<PartResponse> list() {
-        return inventory.list();
+    public PageResponse<PartResponse> list(
+            @RequestParam(required = false) String name, @PageableDefault(size = 20) Pageable pageable) {
+        return inventory.page(name, pageable);
     }
 
     @GetMapping("/parts/low-stock")

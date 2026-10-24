@@ -3,6 +3,7 @@ package com.torquegestao.web;
 import com.torquegestao.config.AppProperties;
 import com.torquegestao.exception.AppException;
 import com.torquegestao.security.Access;
+import com.torquegestao.security.AppUserDetails;
 import com.torquegestao.service.BudgetService;
 import com.torquegestao.service.ClientService;
 import com.torquegestao.service.VehicleService;
@@ -11,6 +12,7 @@ import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -74,16 +76,18 @@ public class BudgetWebController {
 
     @PostMapping("/{id}/approve")
     @PreAuthorize(Access.BUDGET_DECIDE)
-    public String approve(@PathVariable UUID id, RedirectAttributes flash) {
-        budgets.approve(id);
+    public String approve(
+            @PathVariable UUID id, @AuthenticationPrincipal AppUserDetails user, RedirectAttributes flash) {
+        budgets.approve(id, user.getId());
         flash.addFlashAttribute("success", "Orçamento aprovado");
         return "redirect:/budgets";
     }
 
     @PostMapping("/{id}/reject")
     @PreAuthorize(Access.BUDGET_DECIDE)
-    public String reject(@PathVariable UUID id, RedirectAttributes flash) {
-        budgets.reject(id);
+    public String reject(
+            @PathVariable UUID id, @AuthenticationPrincipal AppUserDetails user, RedirectAttributes flash) {
+        budgets.reject(id, user.getId());
         flash.addFlashAttribute("success", "Orçamento recusado");
         return "redirect:/budgets";
     }

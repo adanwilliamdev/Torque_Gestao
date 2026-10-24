@@ -43,9 +43,10 @@ class ServiceOrderStatusTest {
     }
 
     @Test
-    void mesmoStatusEhPermitido() {
+    void repetirOMesmoStatusNaoEhUmaTransicao() {
+        // Repetir o status reiniciaria carimbos (startedAt/completedAt); o service o recusa.
         for (ServiceOrderStatus status : ServiceOrderStatus.values()) {
-            assertTrue(status.canTransitionTo(status));
+            assertFalse(status.canTransitionTo(status));
         }
     }
 

@@ -4,6 +4,7 @@ import com.torquegestao.domain.InventoryMovement;
 import com.torquegestao.domain.MovementType;
 import com.torquegestao.domain.Part;
 import com.torquegestao.dto.MovementResponse;
+import com.torquegestao.dto.PageResponse;
 import com.torquegestao.dto.PartRequest;
 import com.torquegestao.dto.PartResponse;
 import com.torquegestao.exception.BusinessException;
@@ -12,7 +13,10 @@ import com.torquegestao.exception.NotFoundException;
 import com.torquegestao.repository.InventoryMovementRepository;
 import com.torquegestao.repository.PartRepository;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,6 +50,16 @@ public class InventoryService {
     @Transactional(readOnly = true)
     public List<PartResponse> list() {
         return parts.findByActiveTrueOrderByCreatedAtDesc().stream().map(PartResponse::from).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<PartResponse> page(String name, Pageable pageable) {
+        Pageable safe = Pages.safe(
+                pageable, Set.of("name", "code", "stockQuantity", "salePrice", "createdAt"),
+                Sort.by(Sort.Direction.DESC, "createdAt"));
+        return PageResponse.from(parts
+                .findByActiveTrueAndNameContainingIgnoreCase(name == null ? "" : name.trim(), safe)
+                .map(PartResponse::from));
     }
 
     @Transactional(readOnly = true)
