@@ -150,14 +150,21 @@ class ApiFlowIT extends AbstractIntegrationTest {
     }
 
     @Test
-    void autocadastroPublicoSempreCriaRecepcionista() throws Exception {
-        String mail = email("novo");
+    void autocadastroPublicoNaoExiste() throws Exception {
+        // Sistema interno: contas só são criadas por um ADMIN (POST /api/auth/users).
+        String mail = email("intruso");
         mvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json.writeValueAsString(
-                                Map.of("name", "Novo", "email", mail, "password", "senha123", "role", "ADMIN"))))
-                .andExpect(status().isCreated());
-        org.junit.jupiter.api.Assertions.assertEquals(Role.RECEPTIONIST, users.findByEmail(mail).orElseThrow().getRole());
+                        .content(json.writeValueAsString(Map.of("name", "X", "email", mail, "password", "senha123"))))
+                .andExpect(status().isUnauthorized());
+        org.junit.jupiter.api.Assertions.assertTrue(users.findByEmail(mail).isEmpty());
+    }
+
+    @Test
+    void somenteAdminCriaUsuarios() throws Exception {
+        Map<String, String> body = Map.of("name", "Novo", "email", email("novo"), "password", "senha123", "role", "MANAGER");
+        send("POST", "/api/auth/users", tokenFor(createUser(Role.RECEPTIONIST)), body).andExpect(status().isForbidden());
+        send("POST", "/api/auth/users", adminToken(), body).andExpect(status().isCreated());
     }
 
     @Test
