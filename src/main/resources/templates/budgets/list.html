@@ -41,7 +41,7 @@
                 </thead>
                 <tbody>
                 <tr th:each="b : ${budgets}" th:attr="data-filter=${b.status().name()}">
-                    <td class="mono strong col-fit" th:text="${b.budgetNumber()}">BUD2026000001</td>
+                    <td class="col-fit"><span class="code-pill" th:text="${b.budgetNumber()}">BUD2026000001</span></td>
                     <td class="col-grow" th:text="${b.clientName()}">Cliente</td>
                     <td class="col-grow" th:text="${b.vehicleInfo()}">Veículo</td>
                     <td class="num mono col-fit num" th:text="${@fmt.currency(b.totalAmount())}">R$ 0,00</td>

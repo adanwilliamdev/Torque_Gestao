@@ -5,7 +5,7 @@
 <main class="space">
   <div class="page-header">
     <div>
-      <h1>Faturamento · <span class="mono" th:text="${order.orderNumber()}">OS</span></h1>
+      <h1>Faturamento · <span class="code-pill" style="font-size:1rem" th:text="${order.orderNumber()}">OS</span></h1>
       <p><span th:text="${order.clientName()}">Cliente</span> · <span th:text="${order.vehicleInfo()}">Veículo</span>
         · <span class="badge" th:classappend="${@fmt.orderTone(order.status())}" th:text="${order.status().label}">Criada</span></p>
     </div>
@@ -31,7 +31,7 @@
         </thead>
         <tbody>
           <tr th:each="i : ${order.items()}">
-            <td class="mono" th:text="${i.partCode()}">COD</td>
+            <td><span class="code-pill" th:text="${i.partCode()}">COD</span></td>
             <td class="strong" th:text="${i.partName()}">Peça</td>
             <td class="num mono" th:text="${i.quantity()}">1</td>
             <td class="num mono" th:text="${@fmt.currency(i.unitPrice())}">R$ 0,00</td>

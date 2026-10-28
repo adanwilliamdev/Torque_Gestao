@@ -39,7 +39,8 @@
                 </thead>
                 <tbody>
                 <tr th:each="m : ${mechanics}" th:attr="data-filter=${m.available() ? 'available' : 'unavailable'}">
-                    <td class="strong col-grow" th:text="${m.name()}">Nome</td>
+                    <td class="strong col-grow"><div class="cell-user"><span class="avatar sm" th:text="${#strings.toUpperCase(#strings.substring(m.name(),0,1))}"
+                              th:style="'--h:' + ${(#strings.length(m.name()) * 37) % 360}">A</span><span th:text="${m.name()}">Nome</span></div></td>
                     <td class="col-grow" th:text="${@fmt.dash(m.specialty())}">—</td>
                     <td class="col-fit" th:text="${@fmt.phone(m.phone())}">—</td>
                     <td class="col-fit"><span class="badge" th:classappend="${m.available()} ? 'moss' : 'neutral'"

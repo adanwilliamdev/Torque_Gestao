@@ -38,8 +38,84 @@
     }
   });
 
+
+  // ---- Tema claro/escuro ----
+  document.addEventListener('click', function (event) {
+    if (!event.target.closest('.theme-toggle')) return;
+    var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('torque-theme', next); } catch (e) { /* ignora */ }
+  });
+
+  // ---- Mostrar/ocultar senha ----
+  document.addEventListener('click', function (event) {
+    var peek = event.target.closest('[data-peek]');
+    if (!peek) return;
+    var input = document.getElementById(peek.getAttribute('data-peek'));
+    if (input) input.type = input.type === 'password' ? 'text' : 'password';
+  });
+
+  // ---- Toasts: transforma os alertas de sucesso/erro do topo em notificações ----
+  var CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+  var CROSS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+
+  function toast(kind, text) {
+    var box = document.querySelector('.toasts');
+    if (!box) {
+      box = document.createElement('div');
+      box.className = 'toasts';
+      box.setAttribute('aria-live', 'polite');
+      document.body.appendChild(box);
+    }
+    var el = document.createElement('div');
+    el.className = 'toast ' + kind;
+    el.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+    el.innerHTML = '<span class="t-icon">' + (kind === 'error' ? CROSS : CHECK) + '</span><span class="t-text"></span><span class="t-bar"></span>';
+    el.querySelector('.t-text').textContent = text;
+    box.appendChild(el);
+    var close = function () {
+      el.classList.add('leaving');
+      setTimeout(function () { el.remove(); }, 300);
+    };
+    el.addEventListener('click', close);
+    setTimeout(close, 5000);
+  }
+
+  // ---- Contagem animada dos números do dashboard ----
+  function countUp(el) {
+    var target = parseInt(el.textContent, 10);
+    if (isNaN(target) || target === 0 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var start = null, dur = 900;
+    function step(ts) {
+      if (start === null) start = ts;
+      var p = Math.min((ts - start) / dur, 1);
+      el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
+      if (p < 1) requestAnimationFrame(step);
+    }
+    el.textContent = '0';
+    requestAnimationFrame(step);
+  }
+
   // ---- Inicializações que dependem do conteúdo da página (reexecutadas após o modal) ----
   function init() {
+    // Alertas de feedback viram toasts (sem JS continuam visíveis na página)
+    document.querySelectorAll('.content > .alert.success, .content > .alert.error').forEach(function (alert) {
+      toast(alert.classList.contains('error') ? 'error' : 'success', alert.textContent.trim());
+      alert.remove();
+    });
+
+    // Dashboard: saudação, data e contadores
+    var greeting = document.querySelector('[data-greeting]');
+    if (greeting) {
+      var h = new Date().getHours();
+      greeting.textContent = h < 12 ? 'Bom dia' : (h < 18 ? 'Boa tarde' : 'Boa noite');
+    }
+    var today = document.querySelector('[data-today]');
+    if (today) {
+      today.textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+    }
+    document.querySelectorAll('[data-count]').forEach(countUp);
+
     // Filtra veículos pelo cliente escolhido
     var client = document.getElementById('clientId');
     var vehicle = document.querySelector('[data-vehicle-select]');

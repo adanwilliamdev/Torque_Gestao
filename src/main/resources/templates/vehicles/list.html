@@ -39,7 +39,7 @@
                 </thead>
                 <tbody>
                 <tr th:each="v : ${vehicles}" th:attr="data-filter=${v.active() ? 'active' : 'inactive'}">
-                    <td class="mono strong col-fit" th:text="${v.plate()}">ABC1D23</td>
+                    <td class="col-fit"><span class="plate" th:text="${v.plate()}">ABC1D23</span></td>
                     <td class="col-fit" th:text="${v.brand()}">Marca</td>
                     <td class="col-grow" th:text="${v.model()}">Modelo</td>
                     <td class="col-fit" th:text="${v.year()}">2020</td>

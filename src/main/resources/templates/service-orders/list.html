@@ -44,7 +44,7 @@
                 </thead>
                 <tbody>
                 <tr th:each="o : ${orders}" th:attr="data-filter=${o.status().name()}">
-                    <td class="mono strong col-fit" th:text="${o.orderNumber()}">OS2026000001</td>
+                    <td class="col-fit"><span class="code-pill" th:text="${o.orderNumber()}">OS2026000001</span></td>
                     <td class="col-grow" th:text="${o.clientName()}">Cliente</td>
                     <td class="col-grow" th:text="${o.vehicleInfo()}">Veículo</td>
                     <td class="col-grow" th:text="${@fmt.dash(o.mechanicName())}">—</td>

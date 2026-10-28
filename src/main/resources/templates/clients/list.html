@@ -39,7 +39,8 @@
                 </thead>
                 <tbody>
                 <tr th:each="c : ${clients}" th:attr="data-filter=${c.active() ? 'active' : 'inactive'}">
-                    <td class="strong col-grow" th:text="${c.name()}">Nome</td>
+                    <td class="strong col-grow"><div class="cell-user"><span class="avatar sm" th:text="${#strings.toUpperCase(#strings.substring(c.name(),0,1))}"
+                              th:style="'--h:' + ${(#strings.length(c.name()) * 37) % 360}">A</span><span th:text="${c.name()}">Nome</span></div></td>
                     <td class="col-fit" th:text="${@fmt.cpf(c.cpf())}">—</td>
                     <td class="col-fit" th:text="${@fmt.phone(c.phone())}">—</td>
                     <td class="col-grow" th:text="${@fmt.dash(c.email())}">—</td>

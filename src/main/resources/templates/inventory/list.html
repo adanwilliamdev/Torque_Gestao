@@ -39,7 +39,7 @@
                 </thead>
                 <tbody>
                 <tr th:each="p : ${parts}" th:attr="data-filter=${p.lowStock() ? 'low' : 'ok'}">
-                    <td class="mono strong col-fit" th:text="${p.code()}">COD</td>
+                    <td class="col-fit"><span class="code-pill" th:text="${p.code()}">COD</span></td>
                     <td class="strong col-grow" th:text="${p.name()}">Peça</td>
                     <td class="col-grow" th:text="${@fmt.dash(p.manufacturer())}">—</td>
                     <td class="num mono col-fit num" th:text="${p.stockQuantity()}">0</td>
