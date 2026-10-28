@@ -20,25 +20,25 @@
             Torque Gestão
         </a>
         <nav class="nav">
-            <a th:href="@{/}" sec:authorize="hasAnyRole('ADMIN','MANAGER')" th:classappend="${currentPath == '/'} ? 'active'">
+            <a th:href="@{/}" sec:authorize="hasAnyRole('ADMIN','MANAGER')" th:classappend="${currentPath == '/'} ? 'active'" th:attr="aria-current=${currentPath == '/'} ? 'page'">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
                 Dashboard</a>
-            <a th:href="@{/clients}" sec:authorize="hasAnyRole('ADMIN','RECEPTIONIST','MANAGER')" th:classappend="${#strings.startsWith(currentPath, '/clients')} ? 'active'">
+            <a th:href="@{/clients}" sec:authorize="hasAnyRole('ADMIN','RECEPTIONIST','MANAGER')" th:classappend="${#strings.startsWith(currentPath, '/clients')} ? 'active'" th:attr="aria-current=${#strings.startsWith(currentPath, '/clients')} ? 'page'">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 Clientes</a>
-            <a th:href="@{/vehicles}" sec:authorize="hasAnyRole('ADMIN','RECEPTIONIST','MANAGER','MECHANIC')" th:classappend="${#strings.startsWith(currentPath, '/vehicles')} ? 'active'">
+            <a th:href="@{/vehicles}" sec:authorize="hasAnyRole('ADMIN','RECEPTIONIST','MANAGER','MECHANIC')" th:classappend="${#strings.startsWith(currentPath, '/vehicles')} ? 'active'" th:attr="aria-current=${#strings.startsWith(currentPath, '/vehicles')} ? 'page'">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>
                 Veículos</a>
-            <a th:href="@{/mechanics}" sec:authorize="hasAnyRole('ADMIN','MANAGER','RECEPTIONIST')" th:classappend="${#strings.startsWith(currentPath, '/mechanics')} ? 'active'">
+            <a th:href="@{/mechanics}" sec:authorize="hasAnyRole('ADMIN','MANAGER','RECEPTIONIST')" th:classappend="${#strings.startsWith(currentPath, '/mechanics')} ? 'active'" th:attr="aria-current=${#strings.startsWith(currentPath, '/mechanics')} ? 'page'">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"/></svg>
                 Mecânicos</a>
-            <a th:href="@{/service-orders}" sec:authorize="hasAnyRole('ADMIN','MANAGER','RECEPTIONIST','MECHANIC')" th:classappend="${#strings.startsWith(currentPath, '/service-orders')} ? 'active'">
+            <a th:href="@{/service-orders}" sec:authorize="hasAnyRole('ADMIN','MANAGER','RECEPTIONIST','MECHANIC')" th:classappend="${#strings.startsWith(currentPath, '/service-orders')} ? 'active'" th:attr="aria-current=${#strings.startsWith(currentPath, '/service-orders')} ? 'page'">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>
                 Ordens de serviço</a>
-            <a th:href="@{/budgets}" sec:authorize="hasAnyRole('ADMIN','RECEPTIONIST','MANAGER')" th:classappend="${#strings.startsWith(currentPath, '/budgets')} ? 'active'">
+            <a th:href="@{/budgets}" sec:authorize="hasAnyRole('ADMIN','RECEPTIONIST','MANAGER')" th:classappend="${#strings.startsWith(currentPath, '/budgets')} ? 'active'" th:attr="aria-current=${#strings.startsWith(currentPath, '/budgets')} ? 'page'">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/></svg>
                 Orçamentos</a>
-            <a th:href="@{/inventory}" sec:authorize="hasAnyRole('ADMIN','MANAGER')" th:classappend="${#strings.startsWith(currentPath, '/inventory')} ? 'active'">
+            <a th:href="@{/inventory}" sec:authorize="hasAnyRole('ADMIN','MANAGER')" th:classappend="${#strings.startsWith(currentPath, '/inventory')} ? 'active'" th:attr="aria-current=${#strings.startsWith(currentPath, '/inventory')} ? 'page'">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
                 Estoque</a>
         </nav>

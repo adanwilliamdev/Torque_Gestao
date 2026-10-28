@@ -11,16 +11,16 @@
     <div class="alert error" th:each="e : ${#fields.globalErrors()}" th:text="${e}"></div>
     <div class="field">
       <label for="name">Nome *</label>
-      <input id="name" type="text" th:field="*{name}">
+      <div class="input-icon"><svg viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><input id="name" type="text" th:field="*{name}" placeholder="Nome completo do mecânico" autocomplete="off"></div>
       <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
     </div>
     <div class="field">
       <label for="specialty">Especialidade</label>
-      <input id="specialty" type="text" th:field="*{specialty}" placeholder="Motor, Suspensão, Elétrica...">
+      <div class="input-icon"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"/></svg><input id="specialty" type="text" th:field="*{specialty}" placeholder="Ex: Motor, Suspensão, Elétrica"></div>
     </div>
     <div class="field">
       <label for="phone">Telefone</label>
-      <input id="phone" type="text" th:field="*{phone}" placeholder="11999999999">
+      <div class="input-icon"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg><input id="phone" type="text" th:field="*{phone}" placeholder="Ex: 11999999999 (DDD + número)" inputmode="tel"></div>
     </div>
     <div class="form-actions">
       <a class="btn secondary" th:href="@{/mechanics}">Cancelar</a>

@@ -72,18 +72,25 @@
     </div>
 
     <div class="grid cols-2">
-        <div class="card pad">
+        <div class="card pad" th:with="noRevenue=${#lists.isEmpty(bars.?[percent() > 0])}">
             <div class="muted" style="font-weight:500">Faturamento mensal</div>
             <div class="big-number" th:text="${@fmt.currency(stats.monthlyRevenue())}">R$ 0,00</div>
 
-            <!-- Empty State para o gráfico quando zerado (Dica 3) -->
-            <div th:if="${stats.monthlyRevenue() == 0}" class="empty-state" style="padding: 24px 0;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:32px;height:32px;margin-bottom:8px;">
+            <!-- Estado alternativo quando não há faturamento: passo a passo para a primeira OS -->
+            <div th:if="${noRevenue}" class="empty-state compact">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>
                 </svg>
-                <p style="font-size:0.85rem;">Nenhum faturamento registrado.<br>Comece emitindo sua primeira OS.</p>
+                <h3>Seu faturamento aparece aqui</h3>
+                <p>Veja como emitir sua primeira Ordem de Serviço:</p>
+                <ol class="steps">
+                    <li><span><a th:href="@{/clients/new}">Cadastre um cliente</a></span></li>
+                    <li><span><a th:href="@{/vehicles/new}">Adicione o veículo dele</a></span></li>
+                    <li><span><a th:href="@{/service-orders/new}">Abra a ordem de serviço</a></span></li>
+                    <li><span>Finalize a OS e o valor entra no faturamento</span></li>
+                </ol>
             </div>
-            <div th:unless="${stats.monthlyRevenue() == 0}" class="chart" role="img" aria-label="Faturamento dos últimos 6 meses">
+            <div th:unless="${noRevenue}" class="chart" role="img" aria-label="Faturamento dos últimos 6 meses">
                 <div class="col" th:each="bar : ${bars}">
                     <small th:text="${@fmt.currency(bar.amount())}">R$ 0,00</small>
                     <div class="bar" th:style="'height:' + ${bar.percent()} + '%'"
@@ -96,7 +103,10 @@
         <div class="space">
             <div class="card pad">
                 <h3 class="section-title">Mecânicos mais ativos</h3>
-                <p class="muted" th:if="${#lists.isEmpty(stats.topMechanics())}">Sem ordens finalizadas ainda.</p>
+                <div class="empty-state compact" th:if="${#lists.isEmpty(stats.topMechanics())}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"/></svg>
+                    <p>Os mecânicos com mais OS finalizadas aparecem aqui.</p>
+                </div>
                 <ol class="rank" th:unless="${#lists.isEmpty(stats.topMechanics())}">
                     <li th:each="m, it : ${stats.topMechanics()}">
                         <span class="pos" th:text="${it.count}">1</span>
@@ -107,7 +117,10 @@
             </div>
             <div class="card pad">
                 <h3 class="section-title">Peças mais usadas</h3>
-                <p class="muted" th:if="${#lists.isEmpty(stats.mostUsedParts())}">Nenhuma peça utilizada ainda.</p>
+                <div class="empty-state compact" th:if="${#lists.isEmpty(stats.mostUsedParts())}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></svg>
+                    <p>As peças mais usadas nas ordens de serviço aparecem aqui.</p>
+                </div>
                 <ol class="rank" th:unless="${#lists.isEmpty(stats.mostUsedParts())}">
                     <li th:each="p, it : ${stats.mostUsedParts()}">
                         <span class="pos" th:text="${it.count}">1</span>

@@ -9,7 +9,7 @@
             <h1>Clientes</h1>
             <p>Gerencie todos os clientes da oficina</p>
         </div>
-        <a class="btn" th:href="@{/clients/new}" sec:authorize="hasAnyRole('ADMIN','RECEPTIONIST')">
+        <a class="btn" th:href="@{/clients/new}" data-modal sec:authorize="hasAnyRole('ADMIN','RECEPTIONIST')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
             Novo Cliente
@@ -35,22 +35,22 @@
         <div class="table-wrap">
             <table data-table="clients">
                 <thead>
-                <tr><th>Nome</th><th>CPF</th><th>Telefone</th><th>Email</th><th>Veículos</th><th>Status</th><th></th></tr>
+                <tr><th class="col-grow">Nome</th><th class="col-fit">CPF</th><th class="col-fit">Telefone</th><th class="col-grow">Email</th><th class="col-fit">Veículos</th><th class="col-fit">Status</th><th class="col-actions"></th></tr>
                 </thead>
                 <tbody>
                 <tr th:each="c : ${clients}" th:attr="data-filter=${c.active() ? 'active' : 'inactive'}">
-                    <td class="strong" th:text="${c.name()}">Nome</td>
-                    <td th:text="${@fmt.cpf(c.cpf())}">—</td>
-                    <td th:text="${@fmt.phone(c.phone())}">—</td>
-                    <td th:text="${@fmt.dash(c.email())}">—</td>
-                    <td th:text="${c.vehicleCount()}">0</td>
-                    <td><span class="badge" th:classappend="${c.active()} ? 'moss' : 'neutral'"
+                    <td class="strong col-grow" th:text="${c.name()}">Nome</td>
+                    <td class="col-fit" th:text="${@fmt.cpf(c.cpf())}">—</td>
+                    <td class="col-fit" th:text="${@fmt.phone(c.phone())}">—</td>
+                    <td class="col-grow" th:text="${@fmt.dash(c.email())}">—</td>
+                    <td class="col-fit"><span class="badge count" th:text="${c.vehicleCount()}">0</span></td>
+                    <td class="col-fit"><span class="badge" th:classappend="${c.active()} ? 'moss' : 'neutral'"
                               th:text="${c.active()} ? 'Ativo' : 'Inativo'">Ativo</span></td>
-                    <td>
+                    <td class="col-actions">
                         <div class="row-menu" sec:authorize="hasAnyRole('ADMIN','RECEPTIONIST')">
                             <button type="button" class="menu-btn" aria-label="Ações">⋮</button>
                             <div class="menu-dropdown">
-                                <a th:href="@{/clients/{id}/edit(id=${c.id()})}">Editar</a>
+                                <a th:href="@{/clients/{id}/edit(id=${c.id()})}" data-modal>Editar</a>
                                 <form th:action="@{/clients/{id}/activate(id=${c.id()})}" method="post" th:unless="${c.active()}">
                                     <button type="submit">Ativar</button>
                                 </form>
@@ -73,6 +73,7 @@
                             </svg>
                             <h3>Nenhum cliente cadastrado</h3>
                             <p>Comece cadastrando seu primeiro cliente clicando no botão acima.</p>
+                            <a class="btn sm" th:href="@{/clients/new}" data-modal sec:authorize="hasAnyRole('ADMIN','RECEPTIONIST')">+ Cadastrar primeiro cliente</a>
                         </div>
                     </td>
                 </tr>

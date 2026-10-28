@@ -11,13 +11,13 @@
     <div class="alert error" th:each="e : ${#fields.globalErrors()}" th:text="${e}"></div>
     <div class="field">
       <label for="name">Nome *</label>
-      <input id="name" type="text" th:field="*{name}">
+      <div class="input-icon"><svg viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></svg><input id="name" type="text" th:field="*{name}" placeholder="Ex: Filtro de óleo"></div>
       <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
     </div>
     <div class="row">
       <div class="field">
         <label for="code">Código *</label>
-        <input id="code" type="text" th:field="*{code}">
+        <div class="input-icon"><svg viewBox="0 0 24 24"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg><input id="code" type="text" th:field="*{code}" placeholder="Ex: FIL-001"></div>
         <span class="field-error" th:if="${#fields.hasErrors('code')}" th:errors="*{code}"></span>
       </div>
       <div class="field">

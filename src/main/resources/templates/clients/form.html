@@ -11,27 +11,27 @@
     <div class="alert error" th:each="e : ${#fields.globalErrors()}" th:text="${e}"></div>
     <div class="field">
       <label for="name">Nome *</label>
-      <input id="name" type="text" th:field="*{name}">
+      <div class="input-icon"><svg viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><input id="name" type="text" th:field="*{name}" placeholder="Nome completo do cliente" autocomplete="off"></div>
       <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
     </div>
     <div class="row">
       <div class="field">
         <label for="cpf">CPF</label>
-        <input id="cpf" type="text" th:field="*{cpf}" placeholder="12345678900">
+        <div class="input-icon"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="12" r="2"/><path d="M13 10h5M13 14h4"/></svg><input id="cpf" type="text" th:field="*{cpf}" placeholder="Somente números" inputmode="numeric"></div>
       </div>
       <div class="field">
         <label for="phone">Telefone</label>
-        <input id="phone" type="text" th:field="*{phone}" placeholder="11999999999">
+        <div class="input-icon"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg><input id="phone" type="text" th:field="*{phone}" placeholder="Ex: 11999999999" inputmode="tel"></div>
       </div>
     </div>
     <div class="field">
       <label for="email">Email</label>
-      <input id="email" type="email" th:field="*{email}">
+      <div class="input-icon"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg><input id="email" type="email" th:field="*{email}" placeholder="cliente@email.com"></div>
       <span class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></span>
     </div>
     <div class="field">
       <label for="address">Endereço</label>
-      <input id="address" type="text" th:field="*{address}">
+      <div class="input-icon"><svg viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg><input id="address" type="text" th:field="*{address}" placeholder="Rua, número, bairro, cidade"></div>
     </div>
     <div class="form-actions">
       <a class="btn secondary" th:href="@{/clients}">Cancelar</a>

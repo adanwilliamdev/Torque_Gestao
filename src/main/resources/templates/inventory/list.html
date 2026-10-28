@@ -35,24 +35,24 @@
         <div class="table-wrap">
             <table data-table="inventory">
                 <thead>
-                <tr><th>Código</th><th>Nome</th><th>Fabricante</th><th class="num">Estoque</th><th class="num">Preço de venda</th><th>Status</th><th></th></tr>
+                <tr><th class="col-fit">Código</th><th class="col-grow">Nome</th><th class="col-grow">Fabricante</th><th class="col-fit num">Estoque</th><th class="col-fit num">Preço de venda</th><th class="col-fit">Status</th><th class="col-actions"></th></tr>
                 </thead>
                 <tbody>
                 <tr th:each="p : ${parts}" th:attr="data-filter=${p.lowStock() ? 'low' : 'ok'}">
-                    <td class="mono strong" th:text="${p.code()}">COD</td>
-                    <td class="strong" th:text="${p.name()}">Peça</td>
-                    <td th:text="${@fmt.dash(p.manufacturer())}">—</td>
-                    <td class="num mono" th:text="${p.stockQuantity()}">0</td>
-                    <td class="num mono" th:text="${@fmt.currency(p.salePrice())}">R$ 0,00</td>
-                    <td><span class="badge" th:classappend="${p.lowStock()} ? 'rust' : 'moss'"
+                    <td class="mono strong col-fit" th:text="${p.code()}">COD</td>
+                    <td class="strong col-grow" th:text="${p.name()}">Peça</td>
+                    <td class="col-grow" th:text="${@fmt.dash(p.manufacturer())}">—</td>
+                    <td class="num mono col-fit num" th:text="${p.stockQuantity()}">0</td>
+                    <td class="num mono col-fit num" th:text="${@fmt.currency(p.salePrice())}">R$ 0,00</td>
+                    <td class="col-fit"><span class="badge" th:classappend="${p.lowStock()} ? 'rust' : 'moss'"
                               th:text="${p.lowStock()} ? 'Estoque baixo' : 'Em estoque'">Em estoque</span></td>
-                    <td>
+                    <td class="col-actions">
                         <div class="row-menu" sec:authorize="hasAnyRole('ADMIN','MANAGER')">
                             <button type="button" class="menu-btn" aria-label="Ações">⋮</button>
                             <div class="menu-dropdown">
                                 <a th:href="@{/inventory/{id}/edit(id=${p.id()})}">Editar</a>
-                                <a th:href="@{/inventory/{id}/stock(id=${p.id()},kind='ENTRADA')}">Entrada</a>
-                                <a th:href="@{/inventory/{id}/stock(id=${p.id()},kind='SAIDA')}">Saída</a>
+                                <a th:href="@{/inventory/{id}/stock(id=${p.id()},kind='ENTRADA')}" data-modal>Entrada</a>
+                                <a th:href="@{/inventory/{id}/stock(id=${p.id()},kind='SAIDA')}" data-modal>Saída</a>
                                 <form th:action="@{/inventory/{id}/delete(id=${p.id()})}" method="post"
                                       th:attr="data-confirm='Tem certeza que deseja excluir ' + ${p.name()} + '?'">
                                     <button type="submit" class="danger">Excluir</button>
@@ -61,7 +61,6 @@
                         </div>
                     </td>
                 </tr>
-                <!-- ... cabeçalho mantido ... -->
                 <tr th:if="${#lists.isEmpty(parts)}">
                     <td colspan="7" style="padding: 0; border: none;">
                         <div class="empty-state">
@@ -73,10 +72,10 @@
                             </svg>
                             <h3>Estoque vazio</h3>
                             <p>Cadastre as primeiras peças para controlar a entrada e saída do seu estoque.</p>
+                            <a class="btn sm" th:href="@{/inventory/new}" sec:authorize="hasAnyRole('ADMIN','MANAGER')">+ Cadastrar primeira peça</a>
                         </div>
                     </td>
                 </tr>
-                <!-- ... fechamento mantido ... -->
                 </tbody>
             </table>
         </div>

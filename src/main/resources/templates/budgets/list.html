@@ -37,18 +37,18 @@
         <div class="table-wrap">
             <table data-table="budgets">
                 <thead>
-                <tr><th>Número</th><th>Cliente</th><th>Veículo</th><th class="num">Valor</th><th>Validade</th><th>Status</th><th></th></tr>
+                <tr><th class="col-fit">Número</th><th class="col-grow">Cliente</th><th class="col-grow">Veículo</th><th class="col-fit num">Valor</th><th class="col-fit">Validade</th><th class="col-fit">Status</th><th class="col-actions"></th></tr>
                 </thead>
                 <tbody>
                 <tr th:each="b : ${budgets}" th:attr="data-filter=${b.status().name()}">
-                    <td class="mono strong" th:text="${b.budgetNumber()}">BUD2026000001</td>
-                    <td th:text="${b.clientName()}">Cliente</td>
-                    <td th:text="${b.vehicleInfo()}">Veículo</td>
-                    <td class="num mono" th:text="${@fmt.currency(b.totalAmount())}">R$ 0,00</td>
-                    <td th:text="${@fmt.date(b.validUntil())}">—</td>
-                    <td><span class="badge" th:classappend="${@fmt.budgetTone(b.status())}"
+                    <td class="mono strong col-fit" th:text="${b.budgetNumber()}">BUD2026000001</td>
+                    <td class="col-grow" th:text="${b.clientName()}">Cliente</td>
+                    <td class="col-grow" th:text="${b.vehicleInfo()}">Veículo</td>
+                    <td class="num mono col-fit num" th:text="${@fmt.currency(b.totalAmount())}">R$ 0,00</td>
+                    <td class="col-fit" th:text="${@fmt.date(b.validUntil())}">—</td>
+                    <td class="col-fit"><span class="badge" th:classappend="${@fmt.budgetTone(b.status())}"
                               th:text="${b.status().label}">Pendente</span></td>
-                    <td>
+                    <td class="col-actions">
                         <div class="row-menu" sec:authorize="hasAnyRole('ADMIN','MANAGER')"
                              th:if="${b.status().name() == 'PENDENTE'}">
                             <button type="button" class="menu-btn" aria-label="Ações">⋮</button>
@@ -64,7 +64,6 @@
                         </div>
                     </td>
                 </tr>
-                <!-- ... cabeçalho mantido ... -->
                 <tr th:if="${#lists.isEmpty(budgets)}">
                     <td colspan="7" style="padding: 0; border: none;">
                         <div class="empty-state">
@@ -75,10 +74,10 @@
                             </svg>
                             <h3>Nenhum orçamento cadastrado</h3>
                             <p>Crie um novo orçamento para enviar aos seus clientes.</p>
+                            <a class="btn sm" th:href="@{/budgets/new}" sec:authorize="hasAnyRole('ADMIN','RECEPTIONIST')">+ Criar primeiro orçamento</a>
                         </div>
                     </td>
                 </tr>
-                <!-- ... fechamento mantido ... -->
                 </tbody>
             </table>
         </div>

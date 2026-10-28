@@ -20,8 +20,8 @@
     </div>
     <div class="field">
       <label for="reason">Motivo</label>
-      <input id="reason" type="text" maxlength="255" th:field="*{reason}"
-             th:placeholder="${kind.name() == 'ENTRADA'} ? 'Compra, devolução...' : 'Venda, uso em OS...'">
+      <div class="input-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg><input id="reason" type="text" maxlength="255" th:field="*{reason}"
+             th:placeholder="${kind.name() == 'ENTRADA'} ? 'Compra, devolução...' : 'Venda, uso em OS...'"></div>
       <span class="field-error" th:if="${#fields.hasErrors('reason')}" th:errors="*{reason}"></span>
     </div>
     <div class="form-actions">

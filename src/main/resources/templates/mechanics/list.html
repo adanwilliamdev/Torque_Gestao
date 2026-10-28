@@ -9,7 +9,7 @@
             <h1>Mecânicos</h1>
             <p>Gerencie a equipe de mecânicos da oficina</p>
         </div>
-        <a class="btn" th:href="@{/mechanics/new}" sec:authorize="hasAnyRole('ADMIN','MANAGER')">
+        <a class="btn" th:href="@{/mechanics/new}" data-modal sec:authorize="hasAnyRole('ADMIN','MANAGER')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
             Novo Mecânico
@@ -35,20 +35,20 @@
         <div class="table-wrap">
             <table data-table="mechanics">
                 <thead>
-                <tr><th>Nome</th><th>Especialidade</th><th>Telefone</th><th>Disponibilidade</th><th></th></tr>
+                <tr><th class="col-grow">Nome</th><th class="col-grow">Especialidade</th><th class="col-fit">Telefone</th><th class="col-fit">Disponibilidade</th><th class="col-actions"></th></tr>
                 </thead>
                 <tbody>
                 <tr th:each="m : ${mechanics}" th:attr="data-filter=${m.available() ? 'available' : 'unavailable'}">
-                    <td class="strong" th:text="${m.name()}">Nome</td>
-                    <td th:text="${@fmt.dash(m.specialty())}">—</td>
-                    <td th:text="${@fmt.phone(m.phone())}">—</td>
-                    <td><span class="badge" th:classappend="${m.available()} ? 'moss' : 'neutral'"
+                    <td class="strong col-grow" th:text="${m.name()}">Nome</td>
+                    <td class="col-grow" th:text="${@fmt.dash(m.specialty())}">—</td>
+                    <td class="col-fit" th:text="${@fmt.phone(m.phone())}">—</td>
+                    <td class="col-fit"><span class="badge" th:classappend="${m.available()} ? 'moss' : 'neutral'"
                               th:text="${m.available()} ? 'Disponível' : 'Indisponível'">Disponível</span></td>
-                    <td>
+                    <td class="col-actions">
                         <div class="row-menu" sec:authorize="hasAnyRole('ADMIN','MANAGER')">
                             <button type="button" class="menu-btn" aria-label="Ações">⋮</button>
                             <div class="menu-dropdown">
-                                <a th:href="@{/mechanics/{id}/edit(id=${m.id()})}">Editar</a>
+                                <a th:href="@{/mechanics/{id}/edit(id=${m.id()})}" data-modal>Editar</a>
                                 <form th:action="@{/mechanics/{id}/availability(id=${m.id()})}" method="post">
                                     <button type="submit">Alternar disponibilidade</button>
                                 </form>
@@ -60,7 +60,6 @@
                         </div>
                     </td>
                 </tr>
-                <!-- ... cabeçalho mantido ... -->
                 <tr th:if="${#lists.isEmpty(mechanics)}">
                     <td colspan="5" style="padding: 0; border: none;">
                         <div class="empty-state">
@@ -71,10 +70,10 @@
                             </svg>
                             <h3>Nenhum mecânico cadastrado</h3>
                             <p>Adicione os membros da sua equipe para atribuir ordens de serviço.</p>
+                            <a class="btn sm" th:href="@{/mechanics/new}" data-modal sec:authorize="hasAnyRole('ADMIN','MANAGER')">+ Cadastrar primeiro mecânico</a>
                         </div>
                     </td>
                 </tr>
-                <!-- ... fechamento mantido ... -->
                 </tbody>
             </table>
         </div>

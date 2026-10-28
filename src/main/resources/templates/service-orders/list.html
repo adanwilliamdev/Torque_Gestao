@@ -40,18 +40,18 @@
         <div class="table-wrap">
             <table data-table="service-orders">
                 <thead>
-                <tr><th>Número</th><th>Cliente</th><th>Veículo</th><th>Mecânico</th><th>Status</th><th class="num">Valor</th><th></th></tr>
+                <tr><th class="col-fit">Número</th><th class="col-grow">Cliente</th><th class="col-grow">Veículo</th><th class="col-grow">Mecânico</th><th class="col-fit">Status</th><th class="col-fit num">Valor</th><th class="col-actions"></th></tr>
                 </thead>
                 <tbody>
                 <tr th:each="o : ${orders}" th:attr="data-filter=${o.status().name()}">
-                    <td class="mono strong" th:text="${o.orderNumber()}">OS2026000001</td>
-                    <td th:text="${o.clientName()}">Cliente</td>
-                    <td th:text="${o.vehicleInfo()}">Veículo</td>
-                    <td th:text="${@fmt.dash(o.mechanicName())}">—</td>
-                    <td><span class="badge" th:classappend="${@fmt.orderTone(o.status())}"
+                    <td class="mono strong col-fit" th:text="${o.orderNumber()}">OS2026000001</td>
+                    <td class="col-grow" th:text="${o.clientName()}">Cliente</td>
+                    <td class="col-grow" th:text="${o.vehicleInfo()}">Veículo</td>
+                    <td class="col-grow" th:text="${@fmt.dash(o.mechanicName())}">—</td>
+                    <td class="col-fit"><span class="badge" th:classappend="${@fmt.orderTone(o.status())}"
                               th:text="${o.status().label}">Criada</span></td>
-                    <td class="num mono" th:text="${@fmt.currency(o.totalAmount())}">R$ 0,00</td>
-                    <td>
+                    <td class="num mono col-fit num" th:text="${@fmt.currency(o.totalAmount())}">R$ 0,00</td>
+                    <td class="col-actions">
                         <div class="row-menu">
                             <button type="button" class="menu-btn" aria-label="Ações">⋮</button>
                             <div class="menu-dropdown">
@@ -78,7 +78,6 @@
                         </div>
                     </td>
                 </tr>
-                <!-- ... cabeçalho mantido ... -->
                 <tr th:if="${#lists.isEmpty(orders)}">
                     <td colspan="7" style="padding: 0; border: none;">
                         <div class="empty-state">
@@ -91,10 +90,10 @@
                             <h3>Nenhuma ordem de serviço</h3>
                             <p sec:authorize="hasRole('MECHANIC')">Nenhuma ordem atribuída a você no momento.</p>
                             <p sec:authorize="!hasRole('MECHANIC')">Comece abrindo uma nova Ordem de Serviço.</p>
+                            <a class="btn sm" th:href="@{/service-orders/new}" sec:authorize="hasAnyRole('ADMIN','RECEPTIONIST')">+ Abrir primeira ordem</a>
                         </div>
                     </td>
                 </tr>
-                <!-- ... fechamento mantido ... -->
                 </tbody>
             </table>
         </div>

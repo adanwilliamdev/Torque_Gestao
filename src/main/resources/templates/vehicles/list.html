@@ -35,19 +35,19 @@
         <div class="table-wrap">
             <table data-table="vehicles">
                 <thead>
-                <tr><th>Placa</th><th>Marca</th><th>Modelo</th><th>Ano</th><th>Quilometragem</th><th>Cliente</th><th>Status</th><th></th></tr>
+                <tr><th class="col-fit">Placa</th><th class="col-fit">Marca</th><th class="col-grow">Modelo</th><th class="col-fit">Ano</th><th class="col-fit">Quilometragem</th><th class="col-grow">Cliente</th><th class="col-fit">Status</th><th class="col-actions"></th></tr>
                 </thead>
                 <tbody>
                 <tr th:each="v : ${vehicles}" th:attr="data-filter=${v.active() ? 'active' : 'inactive'}">
-                    <td class="mono strong" th:text="${v.plate()}">ABC1D23</td>
-                    <td th:text="${v.brand()}">Marca</td>
-                    <td th:text="${v.model()}">Modelo</td>
-                    <td th:text="${v.year()}">2020</td>
-                    <td th:text="${@fmt.km(v.mileage())}">—</td>
-                    <td th:text="${v.clientName()}">Cliente</td>
-                    <td><span class="badge" th:classappend="${v.active()} ? 'moss' : 'neutral'"
+                    <td class="mono strong col-fit" th:text="${v.plate()}">ABC1D23</td>
+                    <td class="col-fit" th:text="${v.brand()}">Marca</td>
+                    <td class="col-grow" th:text="${v.model()}">Modelo</td>
+                    <td class="col-fit" th:text="${v.year()}">2020</td>
+                    <td class="col-fit" th:text="${@fmt.km(v.mileage())}">—</td>
+                    <td class="col-grow" th:text="${v.clientName()}">Cliente</td>
+                    <td class="col-fit"><span class="badge" th:classappend="${v.active()} ? 'moss' : 'neutral'"
                               th:text="${v.active()} ? 'Ativo' : 'Inativo'">Ativo</span></td>
-                    <td>
+                    <td class="col-actions">
                         <div class="row-menu" sec:authorize="hasAnyRole('ADMIN','RECEPTIONIST')">
                             <button type="button" class="menu-btn" aria-label="Ações">⋮</button>
                             <div class="menu-dropdown">
@@ -69,6 +69,7 @@
                             </svg>
                             <h3>Nenhum veículo cadastrado</h3>
                             <p>Comece adicionando o primeiro veículo da sua oficina.</p>
+                            <a class="btn sm" th:href="@{/vehicles/new}" sec:authorize="hasAnyRole('ADMIN','RECEPTIONIST')">+ Cadastrar primeiro veículo</a>
                         </div>
                     </td>
                 </tr>

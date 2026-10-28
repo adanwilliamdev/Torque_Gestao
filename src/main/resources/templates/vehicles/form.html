@@ -19,7 +19,7 @@
     </div>
     <div class="field">
       <label for="plate">Placa *</label>
-      <input id="plate" type="text" th:field="*{plate}" placeholder="ABC1D23" maxlength="8">
+      <div class="input-icon"><svg viewBox="0 0 24 24"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg><input id="plate" type="text" th:field="*{plate}" placeholder="Ex: ABC1D23" maxlength="8"></div>
       <span class="field-error" th:if="${#fields.hasErrors('plate')}" th:errors="*{plate}"></span>
     </div>
     <div class="row">
@@ -48,7 +48,7 @@
     </div>
     <div class="field">
       <label for="fuelType">Combustível</label>
-      <input id="fuelType" type="text" th:field="*{fuelType}" placeholder="Flex, Gasolina, Diesel...">
+      <div class="input-icon"><svg viewBox="0 0 24 24"><path d="M3 22V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v17M3 22h12M15 10h2a2 2 0 0 1 2 2v3a2 2 0 0 0 4 0V9l-3-3"/></svg><input id="fuelType" type="text" th:field="*{fuelType}" placeholder="Flex, Gasolina, Diesel..."></div>
     </div>
     <div class="form-actions">
       <a class="btn secondary" th:href="@{/vehicles}">Cancelar</a>
