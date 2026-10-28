@@ -73,7 +73,7 @@ a { color:inherit; }
   position:relative;
 }
 .nav a:hover { background:var(--s800); color:#fff; }
-/* Dica 5: Indicador visual na borda esquerda para o item ativo */
+/* Indicador visual na borda esquerda para o item ativo */
 .nav a.active {
   background:linear-gradient(90deg, rgba(59, 130, 246, 0.15) 0%, transparent 100%);
   color:#fff;
@@ -341,7 +341,7 @@ input[readonly] { background:var(--s50); color:var(--s500); }
 .menu-dropdown button.danger:hover { background:var(--rust50); }
 .menu-dropdown form { margin:0; }
 
-/* ---- Empty States (Dica 1) ---- */
+/* ---- Empty States ---- */
 .empty-state {
   display: flex;
   flex-direction: column;

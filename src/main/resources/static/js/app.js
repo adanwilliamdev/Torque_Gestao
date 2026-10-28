@@ -73,7 +73,7 @@
       var q = searchInput ? searchInput.value.toLowerCase().trim() : '';
       var f = filterSelect ? filterSelect.value : '';
       table.querySelectorAll('tbody tr').forEach(function (tr) {
-        // Pula a linha de Empty State (que contém a div)
+        // Pula a linha de Empty State
         if (tr.querySelector('.empty-state')) return;
 
         var textMatch = !q || tr.textContent.toLowerCase().indexOf(q) !== -1;
