@@ -1,9 +1,15 @@
 # 🔧 Torque Gestão
 
 <p align="center">
-  <strong>Sistema de gestão para oficinas mecânicas desenvolvido 100% em Java.</strong>
+  <strong>Sistema de gestão inteligente para oficinas mecânicas, desenvolvido com Java 21 e Spring Boot.</strong>
   <br>
-  Gestão de clientes, veículos, ordens de serviço, faturamento, estoque e equipe em uma única plataforma.
+  Gerencie clientes, veículos, ordens de serviço, orçamentos, estoque, faturamento e equipe em uma única plataforma.
+</p>
+
+<p align="center">
+  <a href="https://torque-gestao.onrender.com/">
+    <img src="https://img.shields.io/badge/🚀_Acessar_Demo-Online-16A34A?style=for-the-badge" alt="Acessar demonstração online">
+  </a>
 </p>
 
 <p align="center">
@@ -14,15 +20,35 @@
   <img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
 </p>
 
+---
+
+## 🌐 Demonstração online
+
+Experimente o Torque Gestão diretamente pelo navegador, utilizando a conta de demonstração.
+
+<p align="center">
+  <a href="https://torque-gestao.onrender.com/">
+    <img src="https://img.shields.io/badge/ABRIR_SISTEMA-Torque_Gestão-2563EB?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Abrir sistema Torque Gestão">
+  </a>
+</p>
+
+| Credencial | Acesso |
+|---|---|
+| **URL** | [torque-gestao.onrender.com](https://torque-gestao.onrender.com/) |
+| **E-mail** | `demo@torquegestao.com` |
+| **Senha** | `torque@gestao2026!` |
+
+> **Nota:** a demonstração está hospedada no Render. Dependendo da configuração do serviço, a primeira requisição pode levar alguns instantes para responder.
+
 ## 📌 Sobre o projeto
 
 O **Torque Gestão** é uma aplicação web para gerenciamento de oficinas mecânicas, desenvolvida com Java 21 e Spring Boot. A plataforma centraliza as principais operações de uma oficina, desde o cadastro de clientes e veículos até o acompanhamento de serviços, controle de peças e cálculo do faturamento.
 
 O sistema implementa um fluxo estruturado de ordens de serviço, com etapas controladas, orçamentos sujeitos à aprovação, lançamento de peças e mão de obra e atualização automática dos valores. O gerenciamento de estoque utiliza movimentações rastreáveis e controle de concorrência para proteger a integridade dos saldos.
 
-A aplicação também conta com autenticação e autorização por perfil, interface web renderizada com Thymeleaf e API REST protegida por JWT. O PostgreSQL armazena os dados, o Flyway gerencia as migrações e o Redis pode ser utilizado para funcionalidades auxiliares, sem ser obrigatório para a execução do sistema.
+A aplicação conta com autenticação e autorização por perfil, interface web com Thymeleaf e API REST protegida por JWT. O PostgreSQL armazena os dados, o Flyway gerencia as migrações e o Redis pode ser utilizado para funcionalidades auxiliares, sem ser obrigatório para a execução do sistema.
 
-O objetivo do projeto é demonstrar a aplicação prática de **desenvolvimento backend com Java, regras de negócio, segurança, persistência relacional, transações e arquitetura em camadas** em um cenário próximo das necessidades reais de uma oficina.
+O projeto demonstra a aplicação prática de **desenvolvimento backend, regras de negócio, segurança, persistência relacional, transações, testes automatizados e arquitetura em camadas** em um cenário próximo das necessidades reais de uma oficina.
 
 ## ✨ Funcionalidades
 
@@ -34,7 +60,7 @@ O objetivo do projeto é demonstrar a aplicação prática de **desenvolvimento 
 - 📦 **Controle de estoque:** entradas, saídas e atualização dos saldos.
 - 👨‍🔧 **Gestão de mecânicos:** consulta da equipe e controle das ordens atribuídas.
 - 📊 **Dashboard gerencial:** acompanhamento das informações operacionais.
-- 🔐 **Controle de acesso:** permissões específicas para administradores, gerentes, recepcionistas e mecânicos.
+- 🔐 **Controle de acesso:** permissões para administradores, gerentes, recepcionistas e mecânicos.
 - 🔑 **Autenticação segura:** sessões com proteção CSRF na interface web e JWT com refresh token rotativo na API.
 - 📚 **API documentada:** documentação OpenAPI e Swagger UI.
 - 🐳 **Ambiente Dockerizado:** inicialização simplificada da aplicação e de suas dependências.
@@ -46,7 +72,7 @@ O objetivo do projeto é demonstrar a aplicação prática de **desenvolvimento 
 | Linguagem | Java 21 |
 | Framework | Spring Boot 3.3 |
 | Web | Spring MVC e Thymeleaf |
-| Interface | HTML, CSS próprio e JavaScript |
+| Interface | HTML, CSS e JavaScript |
 | API REST | Spring MVC e springdoc-openapi |
 | Persistência | Spring Data JPA e Hibernate |
 | Banco de dados | PostgreSQL 16 |
@@ -54,39 +80,39 @@ O objetivo do projeto é demonstrar a aplicação prática de **desenvolvimento 
 | Segurança | Spring Security, JWT, refresh tokens e CSRF |
 | Cache e rate limit | Redis opcional |
 | Build | Maven |
-| Testes unitários | JUnit 5 |
+| Testes unitários | JUnit 5 e Mockito |
 | Testes de integração | Testcontainers |
 | Infraestrutura | Docker e Docker Compose |
 
 ## 🏗️ Arquitetura
 
-A aplicação segue uma arquitetura em camadas, separando os componentes de apresentação, endpoints, regras de negócio, persistência e segurança.
+A aplicação utiliza uma arquitetura em camadas, separando apresentação, endpoints, regras de negócio, persistência e segurança.
 
 ```text
-                  ┌─────────────────────────┐
-                  │       Interface Web     │
-                  │        Thymeleaf        │
-                  └────────────┬────────────┘
-                               │
-                  ┌────────────▼────────────┐
-                  │      Controllers        │
-                  │      Web / REST         │
-                  └────────────┬────────────┘
-                               │
-                  ┌────────────▼────────────┐
-                  │        Services         │
-                  │ Regras de negócio       │
-                  └────────────┬────────────┘
-                               │
-                  ┌────────────▼────────────┐
-                  │      Repositories       │
-                  │    Spring Data JPA      │
-                  └────────────┬────────────┘
-                               │
-                  ┌────────────▼────────────┐
-                  │       PostgreSQL        │
-                  │   Persistência / Dados  │
-                  └─────────────────────────┘
+                 ┌─────────────────────────┐
+                 │       Interface Web     │
+                 │        Thymeleaf        │
+                 └────────────┬────────────┘
+                              │
+                 ┌────────────▼────────────┐
+                 │      Controllers        │
+                 │      Web / REST         │
+                 └────────────┬────────────┘
+                              │
+                 ┌────────────▼────────────┐
+                 │        Services         │
+                 │    Regras de negócio    │
+                 └────────────┬────────────┘
+                              │
+                 ┌────────────▼────────────┐
+                 │      Repositories       │
+                 │    Spring Data JPA      │
+                 └────────────┬────────────┘
+                              │
+                 ┌────────────▼────────────┐
+                 │       PostgreSQL        │
+                 │   Persistência / Dados  │
+                 └─────────────────────────┘
 
        Segurança: Spring Security + JWT + CSRF
        Migrações: Flyway
@@ -111,16 +137,16 @@ Na raiz do repositório, execute:
 docker compose up --build
 ```
 
-Acesse a aplicação em:
+Acesse a aplicação:
 
 **http://localhost:8080**
 
 Na primeira inicialização, o sistema cria um administrador inicial (`admin@torquegestao.com`).
 
-- Se `SEED_ADMIN_PASSWORD` **não** for definida, uma **senha aleatória é gerada e exibida uma única vez no log** da aplicação (`docker compose logs app | grep "Senha inicial"`). Não existe senha padrão conhecida.
-- Para definir a sua: `SEED_ADMIN_PASSWORD=minha-senha-forte docker compose up --build`.
+- Se `SEED_ADMIN_PASSWORD` não for definida, uma senha aleatória será gerada e exibida uma única vez no log da aplicação.
+- Para definir a senha inicial, configure `SEED_ADMIN_PASSWORD` antes de iniciar o ambiente.
 
-> **Segurança:** em produção (`ENVIRONMENT=production`) a aplicação **não cria** o administrador sem uma `SEED_ADMIN_PASSWORD` forte e **recusa iniciar** com o `JWT_SECRET` de exemplo.
+Em produção (`ENVIRONMENT=production`), a aplicação não cria o administrador sem uma senha forte e recusa iniciar com o `JWT_SECRET` de exemplo.
 
 ### Opção 2: execução local
 
@@ -130,7 +156,7 @@ Crie o banco de dados:
 createdb torque
 ```
 
-Configure as variáveis de ambiente conforme o arquivo `.env.example` e inicie a aplicação:
+Configure as variáveis de ambiente conforme o arquivo `.env.example` e execute:
 
 ```bash
 mvn spring-boot:run
@@ -149,38 +175,44 @@ As migrações do banco de dados são executadas automaticamente pelo Flyway dur
 | Especificação OpenAPI | `/api/openapi.json` |
 | Health check | `/api/health` |
 
-A API disponibiliza operações para autenticação, usuários, clientes, veículos, mecânicos, ordens de serviço, orçamentos e estoque, conforme os endpoints implementados no projeto.
+A API disponibiliza operações para autenticação, usuários, clientes, veículos, mecânicos, ordens de serviço, orçamentos e estoque, conforme os endpoints implementados.
 
 ### Paginação
 
-As listagens principais (`GET /api/service-orders`, `/api/clients` e `/api/inventory/parts`) são paginadas e devolvem:
+As principais listagens são paginadas e retornam informações como:
 
 ```json
-{ "content": [ ... ], "page": 0, "size": 20, "totalElements": 134, "totalPages": 7 }
+{
+  "content": [],
+  "page": 0,
+  "size": 20,
+  "totalElements": 134,
+  "totalPages": 7
+}
 ```
 
 | Parâmetro | Descrição |
 |---|---|
-| `page` | Página (começa em 0) |
-| `size` | Itens por página (padrão 20, máximo 100) |
-| `sort` | Ex.: `sort=name,asc`. Apenas campos permitidos; um campo inválido volta ao padrão (`createdAt desc`) |
-| `name` | Filtro por nome (clientes e peças) |
-| `status` | Filtro por status (ordens de serviço) |
+| `page` | Página, iniciando em 0 |
+| `size` | Itens por página, padrão 20 e máximo 100 |
+| `sort` | Ordenação por campo permitido, por exemplo `sort=name,asc` |
+| `name` | Filtro por nome em clientes e peças |
+| `status` | Filtro por status das ordens de serviço |
 
 ## 👥 Perfis e permissões
 
-O sistema utiliza controle de acesso baseado em perfis para restringir operações conforme a responsabilidade de cada usuário.
+O sistema utiliza controle de acesso baseado em perfis para restringir operações de acordo com a responsabilidade de cada usuário.
 
 | Perfil | Permissões |
 |---|---|
-| `ADMIN` | Acesso completo ao sistema e gerenciamento de usuários |
-| `MANAGER` | Dashboard, estoque, mecânicos, clientes, acompanhamento de ordens e aprovação ou recusa de orçamentos |
+| `ADMIN` | Acesso completo e gerenciamento de usuários |
+| `MANAGER` | Dashboard, estoque, mecânicos, clientes, acompanhamento de ordens e decisões sobre orçamentos |
 | `RECEPTIONIST` | Gestão de clientes e veículos, abertura de ordens e orçamentos e consulta de mecânicos |
-| `MECHANIC` | Consulta e atualização das ordens atribuídas, incluindo lançamento de peças e mão de obra |
+| `MECHANIC` | Consulta e atualização das ordens atribuídas, incluindo peças e mão de obra |
 
-Não existe autocadastro: por ser um sistema interno da oficina, **contas só são criadas por um administrador**, via `POST /api/auth/users`.
+Não existe autocadastro. Por ser um sistema interno, as contas são criadas por um administrador via `POST /api/auth/users`.
 
-O `MECHANIC` executa o serviço (diagnóstico, execução e finalização das ordens atribuídas a ele), mas **não aprova nem cancela** ordens de serviço: essas decisões ficam com `ADMIN` e `MANAGER`.
+O perfil `MECHANIC` pode executar os serviços, mas não aprova nem cancela ordens de serviço. Essas decisões ficam sob responsabilidade dos perfis `ADMIN` e `MANAGER`.
 
 ## 🗄️ Modelo de dados
 
@@ -209,41 +241,39 @@ As ordens de serviço seguem uma sequência controlada de estados:
 
 ```text
 CRIADA
-   ↓
+  ↓
 EM_DIAGNOSTICO
-   ↓
+  ↓
 AGUARDANDO_APROVACAO
-   ↓
+  ↓
 APROVADA
-   ↓
+  ↓
 EM_EXECUCAO
-   ↓
+  ↓
 FINALIZADA
 ```
 
-Qualquer etapa ainda aberta pode ser direcionada para `CANCELADA`. Não é permitido pular etapas do fluxo, nem repetir o status atual (isso reiniciaria os carimbos `startedAt`/`completedAt`).
+Qualquer etapa ainda aberta pode ser direcionada para `CANCELADA`. Não é permitido pular etapas nem repetir o status atual, evitando reinicializações indevidas dos registros de início e conclusão.
 
 ### Orçamentos e ordens de serviço
 
-Um orçamento pode ser vinculado a uma OS, e a decisão sobre ele se reflete na OS dentro da mesma transação:
-
-- **Aprovar** o orçamento leva a OS de `AGUARDANDO_APROVACAO` para `APROVADA`.
-- **Recusar** o orçamento **cancela** a OS e devolve as peças ao estoque.
-- Se a OS vinculada não estiver aguardando aprovação, a decisão é recusada (HTTP 400) e nada é alterado.
+- **Aprovação:** move a ordem de `AGUARDANDO_APROVACAO` para `APROVADA`.
+- **Recusa:** cancela a ordem vinculada e devolve as peças ao estoque.
+- **Validação:** decisões são recusadas se a ordem não estiver aguardando aprovação, sem alterações nos dados.
 
 ### Faturamento e peças
 
-- A inclusão de peças em uma ordem de serviço reduz o estoque.
-- O preço de venda da peça é registrado no momento de sua utilização.
+- A inclusão de peças em uma ordem reduz o estoque.
+- O preço de venda é registrado no momento da utilização da peça.
 - O total da ordem é recalculado conforme os lançamentos de peças e mão de obra.
-- A remoção de uma peça, ou o **cancelamento da OS**, estorna as quantidades correspondentes ao estoque (cada estorno gera uma movimentação rastreável).
+- A remoção de peças e o cancelamento da ordem geram estornos rastreáveis.
 - Ordens finalizadas ou canceladas não permitem novas alterações de peças, mão de obra ou mecânico atribuído.
 
 ### Integridade do estoque
 
-O estoque é atualizado por meio de movimentações de entrada e saída. O controle de concorrência otimista impede que operações simultâneas sobrescrevam silenciosamente o saldo de uma mesma peça.
+O estoque é atualizado por movimentações de entrada e saída. O controle de concorrência otimista evita que operações simultâneas sobrescrevam silenciosamente o saldo de uma mesma peça.
 
-Quando ocorre um conflito de atualização, a operação concorrente pode receber uma resposta HTTP `409 Conflict`.
+Em caso de conflito de atualização, a operação pode receber HTTP `409 Conflict`.
 
 ### Numeração e exclusões
 
@@ -258,32 +288,32 @@ As principais variáveis de ambiente estão documentadas em [`.env.example`](.en
 
 | Variável | Padrão | Finalidade |
 |---|---|---|
-| `DB_URL` | `jdbc:postgresql://localhost:5432/torque` | Conexão com o PostgreSQL |
+| `DB_URL` | `jdbc:postgresql://localhost:5432/torque` | Conexão com PostgreSQL |
 | `DB_USER` | `postgres` | Usuário do banco |
 | `DB_PASSWORD` | `postgres` | Senha do banco |
 | `REDIS_HOST` | `localhost` | Endereço do Redis |
 | `REDIS_PORT` | `6379` | Porta do Redis |
-| `JWT_SECRET` | Placeholder (só dev) | Segredo usado na assinatura de tokens |
-| `JWT_EXPIRATION_MS` | `900000` (15 min) | Validade do access token; a sessão é renovada via refresh token (7 dias, rotativo) |
+| `JWT_SECRET` | Placeholder para desenvolvimento | Segredo de assinatura dos tokens |
+| `JWT_EXPIRATION_MS` | `900000` | Validade de 15 minutos do access token |
 | `ENVIRONMENT` | `development` | Ambiente de execução |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:8080` | Origens permitidas para a API |
 | `SEED_ADMIN_EMAIL` | `admin@torquegestao.com` | E-mail do administrador inicial |
-| `SEED_ADMIN_PASSWORD` | vazio | Senha inicial. Vazio = gera uma aleatória e a exibe uma vez no log (não em produção) |
+| `SEED_ADMIN_PASSWORD` | Vazio | Senha inicial do administrador |
 | `APP_TIMEZONE` | `America/Sao_Paulo` | Fuso horário da aplicação |
 
-Em produção, configure `ENVIRONMENT=production` e um `JWT_SECRET` forte, com pelo menos 32 caracteres (`openssl rand -base64 48`). Nesse ambiente o administrador inicial só é criado se `SEED_ADMIN_PASSWORD` for definida com uma senha forte.
+Em produção, configure `ENVIRONMENT=production` e um `JWT_SECRET` forte, com pelo menos 32 caracteres. A senha do administrador inicial também deve atender aos requisitos de segurança da aplicação.
 
-O limite de tentativas de login usa um script Lua atômico no Redis (contagem e expiração na mesma operação).
+O limite de tentativas de login utiliza um script Lua atômico no Redis, realizando contagem e expiração na mesma operação.
 
 ## 🧪 Testes
 
-| Tipo | O que cobre | Como rodar |
+| Tipo | Cobertura | Execução |
 |---|---|---|
-| Unitários (JUnit 5 + Mockito) | Regras da OS isoladas: estorno no cancelamento, transições, permissões do mecânico, decisão de orçamento | `mvn test` |
-| Integração (`*IT`, Testcontainers + PostgreSQL) | Fluxos da API de ponta a ponta, segurança por perfil, paginação, interface web | `mvn verify` |
-| Concorrência (`StockConcurrencyIT`) | Baixas simultâneas de estoque nunca geram saldo negativo nem perdem atualizações | `mvn verify` |
+| Unitários (JUnit 5 + Mockito) | Transições de estado, cancelamento, estornos e permissões | `mvn test` |
+| Integração (Testcontainers + PostgreSQL) | Fluxos da API, segurança, paginação e interface web | `mvn verify` |
+| Concorrência (`StockConcurrencyIT`) | Baixas simultâneas, integridade e prevenção de atualizações perdidas | `mvn verify` |
 
-Os testes de integração exigem Docker. A cobertura (JaCoCo) é gerada em `target/site/jacoco/index.html` após `mvn verify`.
+Os testes de integração exigem Docker. O relatório de cobertura JaCoCo é gerado em `target/site/jacoco/index.html` após `mvn verify`.
 
 O workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) executa `mvn verify` e o build da imagem Docker a cada push e pull request.
 
@@ -297,22 +327,22 @@ torque-gestao/
 ├── .env.example
 ├── .github/workflows/ci.yml
 └── src/
-    ├── test/                 # unitários (Mockito) e integração (Testcontainers)
+    ├── test/                  # Testes unitários e de integração
     └── main/
         ├── java/com/torquegestao/
-        │   ├── api/          # Controllers REST e tratamento de erros
-        │   ├── web/          # Controllers e formulários Thymeleaf
-        │   ├── service/      # Regras de negócio
-        │   ├── repository/   # Spring Data JPA
-        │   ├── domain/       # Entidades e enums
-        │   ├── dto/          # Contratos da API
-        │   ├── security/     # JWT, filtros e autorização
-        │   ├── config/       # Configuração, segurança e seed
-        │   └── exception/    # Exceções de negócio
+        │   ├── api/           # Controllers REST e tratamento de erros
+        │   ├── web/           # Controllers e formulários Thymeleaf
+        │   ├── service/       # Regras de negócio
+        │   ├── repository/    # Spring Data JPA
+        │   ├── domain/        # Entidades e enums
+        │   ├── dto/           # Contratos da API
+        │   ├── security/      # JWT, filtros e autorização
+        │   ├── config/        # Configuração, segurança e seed
+        │   └── exception/     # Exceções de negócio
         └── resources/
-            ├── db/migration/ # Migrações Flyway
-            ├── templates/    # Páginas Thymeleaf
-            └── static/       # CSS e JavaScript
+            ├── db/migration/  # Migrações Flyway
+            ├── templates/     # Páginas Thymeleaf
+            └── static/        # CSS e JavaScript
 ```
 
 ## 🎯 Objetivos técnicos
@@ -320,7 +350,7 @@ torque-gestao/
 O Torque Gestão foi desenvolvido para aplicar e demonstrar conhecimentos em:
 
 - Desenvolvimento backend com Java e Spring Boot.
-- Construção de APIs REST e documentação OpenAPI.
+- Construção e documentação de APIs REST.
 - Autenticação, autorização e segurança de aplicações web.
 - Modelagem de dados relacionais e migrações versionadas.
 - Implementação de regras de negócio e fluxos de estados.
@@ -328,3 +358,12 @@ O Torque Gestão foi desenvolvido para aplicar e demonstrar conhecimentos em:
 - Testes unitários e de integração com Testcontainers.
 - Conteinerização e configuração por variáveis de ambiente.
 
+---
+
+<p align="center">
+  <strong>🔧 Torque Gestão</strong>
+  <br>
+  Gestão eficiente, operações organizadas e backend robusto.
+  <br><br>
+  <a href="https://torque-gestao.onrender.com/">Acessar demonstração online</a>
+</p>
