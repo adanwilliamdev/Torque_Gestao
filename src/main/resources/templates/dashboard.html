@@ -75,7 +75,15 @@
         <div class="card pad">
             <div class="muted" style="font-weight:500">Faturamento mensal</div>
             <div class="big-number" th:text="${@fmt.currency(stats.monthlyRevenue())}">R$ 0,00</div>
-            <div class="chart" role="img" aria-label="Faturamento dos últimos 6 meses">
+
+            <!-- Empty State para o gráfico quando zerado (Dica 3) -->
+            <div th:if="${stats.monthlyRevenue() == 0}" class="empty-state" style="padding: 24px 0;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:32px;height:32px;margin-bottom:8px;">
+                    <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>
+                </svg>
+                <p style="font-size:0.85rem;">Nenhum faturamento registrado.<br>Comece emitindo sua primeira OS.</p>
+            </div>
+            <div th:unless="${stats.monthlyRevenue() == 0}" class="chart" role="img" aria-label="Faturamento dos últimos 6 meses">
                 <div class="col" th:each="bar : ${bars}">
                     <small th:text="${@fmt.currency(bar.amount())}">R$ 0,00</small>
                     <div class="bar" th:style="'height:' + ${bar.percent()} + '%'"

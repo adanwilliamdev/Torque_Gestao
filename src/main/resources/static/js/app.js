@@ -73,7 +73,9 @@
       var q = searchInput ? searchInput.value.toLowerCase().trim() : '';
       var f = filterSelect ? filterSelect.value : '';
       table.querySelectorAll('tbody tr').forEach(function (tr) {
-        if (tr.querySelector('td.empty')) return;
+        // Pula a linha de Empty State (que contém a div)
+        if (tr.querySelector('.empty-state')) return;
+
         var textMatch = !q || tr.textContent.toLowerCase().indexOf(q) !== -1;
         var rowFilter = tr.getAttribute('data-filter') || '';
         var filterMatch = !f || rowFilter === f;

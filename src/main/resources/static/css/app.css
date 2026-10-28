@@ -50,7 +50,8 @@ a { color:inherit; }
 .shell { display:flex; min-height:100vh; }
 .sidebar {
   width:248px; flex:0 0 248px;
-  background:var(--s900); color:#fff;
+  background:linear-gradient(180deg, var(--s950) 0%, var(--s900) 100%);
+  color:#fff;
   display:flex; flex-direction:column;
   padding:20px 14px;
   position:sticky; top:0; height:100vh;
@@ -69,9 +70,18 @@ a { color:inherit; }
   color:var(--s400); text-decoration:none;
   font-size:.92rem; font-weight:500;
   transition:var(--transition);
+  position:relative;
 }
 .nav a:hover { background:var(--s800); color:#fff; }
-.nav a.active { background:var(--s800); color:#fff; box-shadow:inset 3px 0 0 var(--a500); }
+/* Dica 5: Indicador visual na borda esquerda para o item ativo */
+.nav a.active {
+  background:linear-gradient(90deg, rgba(59, 130, 246, 0.15) 0%, transparent 100%);
+  color:#fff;
+}
+.nav a.active::before {
+  content:""; position:absolute; left:0; top:10%; bottom:10%;
+  width:4px; background:var(--a500); border-radius:0 4px 4px 0;
+}
 .nav svg { width:18px; height:18px; flex:0 0 18px; }
 
 .main-col { flex:1; min-width:0; display:flex; flex-direction:column; }
@@ -132,7 +142,7 @@ a { color:inherit; }
 
 /* ---- table ---- */
 .table-wrap { overflow-x:auto; }
-table { width:100%; border-collapse:collapse; background:#fff; }
+table { width:100%; border-collapse:collapse; background:#fff; table-layout: auto; }
 th {
   text-align:left; font-size:.72rem; text-transform:uppercase; letter-spacing:.06em;
   color:var(--s500); font-weight:600;
@@ -148,7 +158,6 @@ tr:last-child td { border-bottom:none; }
 tbody tr { transition:background .15s ease; }
 tbody tr:hover td { background:var(--s50); }
 td.num, th.num { text-align:right; }
-td.empty { text-align:center; color:var(--s500); padding:40px 16px; }
 .strong { font-weight:600; color:var(--s800); }
 
 /* ---- table toolbar (busca + filtro) ---- */
@@ -181,8 +190,8 @@ td.empty { text-align:center; color:var(--s500); padding:40px 16px; }
 /* ---- badges ---- */
 .badge {
   display:inline-flex; align-items:center; gap:6px;
-  border-radius:999px; padding:3px 10px;
-  font-size:.75rem; font-weight:500; white-space:nowrap;
+  border-radius:999px; padding:4px 12px;
+  font-size:.75rem; font-weight:600; white-space:nowrap;
   background:var(--s100); color:var(--s600);
 }
 .badge::before { content:""; width:6px; height:6px; border-radius:50%; background:var(--s400); }
@@ -244,14 +253,6 @@ input[readonly] { background:var(--s50); color:var(--s500); }
   line-height:1.15; margin-top:2px; color:var(--s900);
   font-variant-numeric:tabular-nums;
 }
-.stat-trend {
-  display:inline-flex; align-items:center; gap:4px;
-  font-size:.78rem; font-weight:500; margin-top:8px;
-  padding:2px 8px; border-radius:999px;
-}
-.stat-trend.up { background:var(--moss50); color:var(--moss700); }
-.stat-trend.down { background:var(--rust50); color:var(--rust600); }
-.stat-trend.neutral { background:var(--s100); color:var(--s600); }
 
 /* ---- chart / ranking ---- */
 .big-number { font-family:var(--display); font-size:2.4rem; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
@@ -339,6 +340,34 @@ input[readonly] { background:var(--s50); color:var(--s500); }
 .menu-dropdown button.danger { color:var(--rust600); }
 .menu-dropdown button.danger:hover { background:var(--rust50); }
 .menu-dropdown form { margin:0; }
+
+/* ---- Empty States (Dica 1) ---- */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+}
+.empty-state svg {
+  width: 48px;
+  height: 48px;
+  color: var(--s300);
+  margin-bottom: 16px;
+}
+.empty-state h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--s800);
+  margin-bottom: 8px;
+}
+.empty-state p {
+  font-size: 0.9rem;
+  color: var(--s500);
+  max-width: 300px;
+  margin: 0 auto;
+}
 
 /* ---- responsive ---- */
 @media (max-width:900px) {
