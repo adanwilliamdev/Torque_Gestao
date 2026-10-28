@@ -114,7 +114,6 @@
     if (today) {
       today.textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
     }
-    document.querySelectorAll('[data-count]').forEach(countUp);
 
     // Filtra veículos pelo cliente escolhido
     var client = document.getElementById('clientId');
