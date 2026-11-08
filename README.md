@@ -452,7 +452,7 @@ Desenvolvedor Backend Júnior com foco em Java e Spring Boot, interessado em arq
   <a href="https://github.com/adanwilliamdev">
     <img src="https://img.shields.io/badge/GitHub-adanwilliamdev-181717?style=flat&logo=github" alt="GitHub">
   </a>
-  <a href="https://www.linkedin.com/in/awosantos/">
+  <a href="https://www.linkedin.com/in/adan-william-9593163b7/">
     <img src="https://img.shields.io/badge/LinkedIn-Adan_William-0A66C2?style=flat&logo=linkedin" alt="LinkedIn">
   </a>
   <a href="https://adanwilliamdev.github.io/">
