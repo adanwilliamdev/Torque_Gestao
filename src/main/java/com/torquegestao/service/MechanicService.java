@@ -27,6 +27,15 @@ public class MechanicService {
                 .orElseThrow(() -> new NotFoundException("Mecânico não encontrado com ID: " + id));
     }
 
+    /** Mecânico que ainda pode receber ordens de serviço (a exclusão é lógica). */
+    public Mechanic getActiveMechanic(UUID id) {
+        Mechanic mechanic = getMechanic(id);
+        if (!mechanic.isActive()) {
+            throw new BusinessException("Mecânico inativo: " + mechanic.getName());
+        }
+        return mechanic;
+    }
+
     @Transactional(readOnly = true)
     public Optional<Mechanic> findByUserId(UUID userId) {
         return mechanics.findByUserId(userId);

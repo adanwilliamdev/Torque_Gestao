@@ -9,10 +9,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import com.torquegestao.domain.Client;
+import com.torquegestao.domain.Mechanic;
 import com.torquegestao.domain.Role;
+import com.torquegestao.domain.ServiceOrderStatus;
 import com.torquegestao.domain.User;
+import com.torquegestao.domain.Vehicle;
+import com.torquegestao.dto.ServiceOrderRequest;
+import com.torquegestao.dto.ServiceOrderResponse;
+import com.torquegestao.dto.StatusUpdateRequest;
+import com.torquegestao.repository.ClientRepository;
+import com.torquegestao.repository.MechanicRepository;
 import com.torquegestao.repository.UserRepository;
+import com.torquegestao.repository.VehicleRepository;
 import com.torquegestao.security.AppUserDetails;
+import com.torquegestao.service.ServiceOrderService;
+import java.math.BigDecimal;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +37,10 @@ class WebFlowIT extends AbstractIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired UserRepository users;
     @Autowired PasswordEncoder encoder;
+    @Autowired ClientRepository clients;
+    @Autowired VehicleRepository vehicles;
+    @Autowired MechanicRepository mechanics;
+    @Autowired ServiceOrderService orderService;
 
     private AppUserDetails principal(Role role) {
         User u = new User();
@@ -82,6 +98,89 @@ class WebFlowIT extends AbstractIntegrationTest {
     @Test
     void postSemCsrfEhRecusado() throws Exception {
         mvc.perform(post("/clients").with(user(principal(Role.ADMIN))).param("name", "X"))
+                .andExpect(status().isForbidden());
+    }
+
+    // ------------------------------------------------------------------ faturamento, pagamentos e histórico
+
+    private ServiceOrderResponse novaOs(AppUserDetails abertaPor, UUID mechanicId) {
+        Client client = new Client();
+        client.setName("Cliente Faturamento");
+        client = clients.saveAndFlush(client);
+        Vehicle vehicle = new Vehicle();
+        vehicle.setPlate("W" + UUID.randomUUID().toString().replace("-", "").substring(0, 6).toUpperCase());
+        vehicle.setBrand("Fiat");
+        vehicle.setModel("Uno");
+        vehicle.setYear(2012);
+        vehicle.setClient(client);
+        vehicle = vehicles.saveAndFlush(vehicle);
+        return orderService.create(
+                new ServiceOrderRequest(client.getId(), vehicle.getId(), mechanicId, "Barulho"), abertaPor.getId());
+    }
+
+    private void finalizar(AppUserDetails admin, UUID orderId) {
+        for (ServiceOrderStatus next : new ServiceOrderStatus[] {
+                ServiceOrderStatus.EM_DIAGNOSTICO, ServiceOrderStatus.AGUARDANDO_APROVACAO,
+                ServiceOrderStatus.APROVADA, ServiceOrderStatus.EM_EXECUCAO, ServiceOrderStatus.FINALIZADA}) {
+            orderService.updateStatus(orderId, new StatusUpdateRequest(next, null), admin);
+        }
+    }
+
+    @Test
+    void paginaDeFaturamentoMostraHistoricoEPermiteRegistrarPagamento() throws Exception {
+        AppUserDetails admin = principal(Role.ADMIN);
+        ServiceOrderResponse order = novaOs(admin, null);
+        orderService.updateLaborAmount(order.id(), new BigDecimal("100.00"), admin);
+        finalizar(admin, order.id());
+
+        mvc.perform(get("/service-orders/" + order.id() + "/billing").with(user(admin)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Histórico de status")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Registrar pagamento")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/labor")));
+
+        mvc.perform(post("/service-orders/" + order.id() + "/payments").with(user(admin)).with(csrf())
+                        .param("amount", "40.00").param("method", "PIX"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/service-orders/" + order.id() + "/billing"));
+
+        mvc.perform(get("/service-orders/" + order.id() + "/billing").with(user(admin)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Pago parcialmente")));
+    }
+
+    @Test
+    void pagamentoAcimaDoSaldoVoltaComMensagemDeErro() throws Exception {
+        AppUserDetails admin = principal(Role.ADMIN);
+        ServiceOrderResponse order = novaOs(admin, null);
+        orderService.updateLaborAmount(order.id(), new BigDecimal("100.00"), admin);
+        finalizar(admin, order.id());
+
+        mvc.perform(post("/service-orders/" + order.id() + "/payments").with(user(admin)).with(csrf())
+                        .param("amount", "150.00").param("method", "PIX"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("service-orders/billing"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("O valor excede o saldo em aberto")));
+    }
+
+    @Test
+    void mecanicoVeFaturamentoSemMaoDeObraNemPagamentos() throws Exception {
+        AppUserDetails admin = principal(Role.ADMIN);
+        AppUserDetails mecanico = principal(Role.MECHANIC);
+        Mechanic mechanic = new Mechanic();
+        mechanic.setName("Zé");
+        mechanic.setUserId(mecanico.getId());
+        mechanic = mechanics.saveAndFlush(mechanic);
+        ServiceOrderResponse order = novaOs(admin, mechanic.getId());
+
+        mvc.perform(get("/service-orders/" + order.id() + "/billing").with(user(mecanico)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Histórico de status")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("/labor"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Registrar pagamento"))));
+
+        mvc.perform(post("/service-orders/" + order.id() + "/labor").with(user(mecanico)).with(csrf())
+                        .param("laborAmount", "1.00"))
                 .andExpect(status().isForbidden());
     }
 }

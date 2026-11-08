@@ -32,7 +32,7 @@ public record BudgetResponse(
                 b.getServiceOrderId(),
                 b.getDescription(),
                 b.getTotalAmount(),
-                b.getStatus(),
+                b.getEffectiveStatus(),
                 b.getValidUntil(),
                 b.getCreatedAt());
     }

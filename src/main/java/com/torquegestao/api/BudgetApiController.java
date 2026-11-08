@@ -64,6 +64,13 @@ public class BudgetApiController {
         return budgets.getResponse(id);
     }
 
+    /** Atualiza o valor de um orçamento pendente para o total atual da OS vinculada. */
+    @PatchMapping("/{id}/sync-order-total")
+    @PreAuthorize(Access.BUDGET_CREATE)
+    public BudgetResponse syncOrderTotal(@PathVariable UUID id) {
+        return budgets.syncWithOrder(id);
+    }
+
     @PatchMapping("/{id}/approve")
     @PreAuthorize(Access.BUDGET_DECIDE)
     public BudgetResponse approve(@PathVariable UUID id, @AuthenticationPrincipal AppUserDetails user) {

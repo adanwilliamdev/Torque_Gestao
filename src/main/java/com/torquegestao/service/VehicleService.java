@@ -28,6 +28,21 @@ public class VehicleService {
                 .orElseThrow(() -> new NotFoundException("Veículo não encontrado com ID: " + id));
     }
 
+    /**
+     * Veículo ativo e pertencente ao cliente informado: impede abrir OS/orçamento com o carro de um
+     * cliente no nome de outro, ou com um veículo desativado.
+     */
+    public Vehicle getActiveVehicleOf(UUID vehicleId, UUID clientId) {
+        Vehicle vehicle = getVehicle(vehicleId);
+        if (!vehicle.isActive()) {
+            throw new BusinessException("Veículo inativo: " + vehicle.getPlate());
+        }
+        if (!vehicle.getClient().getId().equals(clientId)) {
+            throw new BusinessException("O veículo " + vehicle.getPlate() + " não pertence ao cliente informado");
+        }
+        return vehicle;
+    }
+
     @Transactional(readOnly = true)
     public VehicleResponse getVehicleResponse(UUID id) {
         return VehicleResponse.from(getVehicle(id));

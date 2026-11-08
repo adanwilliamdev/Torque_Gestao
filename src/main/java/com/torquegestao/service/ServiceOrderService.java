@@ -6,15 +6,19 @@ import com.torquegestao.domain.Role;
 import com.torquegestao.domain.ServiceOrder;
 import com.torquegestao.domain.ServiceOrderItem;
 import com.torquegestao.domain.ServiceOrderStatus;
+import com.torquegestao.domain.ServiceOrderStatusHistory;
 import com.torquegestao.dto.PageResponse;
 import com.torquegestao.dto.ServiceOrderItemRequest;
 import com.torquegestao.dto.ServiceOrderRequest;
 import com.torquegestao.dto.ServiceOrderResponse;
+import com.torquegestao.dto.StatusHistoryResponse;
 import com.torquegestao.dto.StatusUpdateRequest;
 import com.torquegestao.exception.BusinessException;
 import com.torquegestao.exception.ForbiddenException;
 import com.torquegestao.exception.NotFoundException;
 import com.torquegestao.repository.ServiceOrderRepository;
+import com.torquegestao.repository.ServiceOrderStatusHistoryRepository;
+import com.torquegestao.repository.UserRepository;
 import com.torquegestao.security.AppUserDetails;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -44,18 +48,24 @@ public class ServiceOrderService {
     private final VehicleService vehicleService;
     private final MechanicService mechanicService;
     private final InventoryService inventoryService;
+    private final ServiceOrderStatusHistoryRepository history;
+    private final UserRepository users;
 
     public ServiceOrderService(
             ServiceOrderRepository orders,
             ClientService clientService,
             VehicleService vehicleService,
             MechanicService mechanicService,
-            InventoryService inventoryService) {
+            InventoryService inventoryService,
+            ServiceOrderStatusHistoryRepository history,
+            UserRepository users) {
         this.orders = orders;
         this.clientService = clientService;
         this.vehicleService = vehicleService;
         this.mechanicService = mechanicService;
         this.inventoryService = inventoryService;
+        this.history = history;
+        this.users = users;
     }
 
     // ---------------------------------------------------------------- consultas
@@ -111,12 +121,26 @@ public class ServiceOrderService {
         return user.getRole() == Role.MECHANIC ? listForMechanic(user) : list();
     }
 
+    /** Linha do tempo de status da OS (do mais antigo para o mais recente). */
+    @Transactional(readOnly = true)
+    public List<StatusHistoryResponse> history(UUID id, AppUserDetails user) {
+        ServiceOrder order = getOrder(id);
+        assertCanAccess(order, user);
+        return history.findByServiceOrderIdOrderByChangedAtAsc(id).stream()
+                .map(StatusHistoryResponse::from)
+                .toList();
+    }
+
     // ---------------------------------------------------------------- comandos
 
-    public ServiceOrderResponse create(ServiceOrderRequest data) {
-        var client = clientService.getClient(data.clientId());
-        var vehicle = vehicleService.getVehicle(data.vehicleId());
-        Mechanic mechanic = data.mechanicId() == null ? null : mechanicService.getMechanic(data.mechanicId());
+    /**
+     * Abre uma OS. Cliente, veículo e mecânico precisam estar ativos, e o veículo precisa ser do
+     * cliente informado. A abertura entra no histórico de status, atribuída a {@code userId}.
+     */
+    public ServiceOrderResponse create(ServiceOrderRequest data, UUID userId) {
+        var client = clientService.getActiveClient(data.clientId());
+        var vehicle = vehicleService.getActiveVehicleOf(data.vehicleId(), client.getId());
+        Mechanic mechanic = data.mechanicId() == null ? null : mechanicService.getActiveMechanic(data.mechanicId());
 
         ServiceOrder order = new ServiceOrder();
         order.setOrderNumber(nextOrderNumber());
@@ -126,6 +150,7 @@ public class ServiceOrderService {
         order.setReportedProblem(Texts.blankToNull(data.reportedProblem()));
         order.setStatus(ServiceOrderStatus.CRIADA);
         orders.saveAndFlush(order);
+        recordHistory(order, null, ServiceOrderStatus.CRIADA, userId);
         return ServiceOrderResponse.from(order);
     }
 
@@ -155,7 +180,7 @@ public class ServiceOrderService {
     public ServiceOrderResponse assignMechanic(UUID id, UUID mechanicId) {
         ServiceOrder order = getOrder(id);
         assertEditable(order);
-        order.setMechanic(mechanicService.getMechanic(mechanicId));
+        order.setMechanic(mechanicService.getActiveMechanic(mechanicId));
         orders.flush();
         return ServiceOrderResponse.from(order);
     }
@@ -255,6 +280,7 @@ public class ServiceOrderService {
         validateTransition(current, next);
 
         order.setStatus(next);
+        recordHistory(order, current, next, userId);
         if (diagnosis != null) {
             order.setDiagnosis(diagnosis);
         }
@@ -263,10 +289,23 @@ public class ServiceOrderService {
         }
         if (next == ServiceOrderStatus.FINALIZADA) {
             order.setCompletedAt(Instant.now());
+            // OS sem nada a cobrar já nasce quitada; as demais ficam pendentes até o primeiro pagamento.
+            order.refreshPaymentStatus();
         }
         if (next == ServiceOrderStatus.CANCELADA) {
             restoreStock(order, userId);
         }
+    }
+
+    /** Grava quem mudou o status, de qual para qual e quando. */
+    private void recordHistory(ServiceOrder order, ServiceOrderStatus from, ServiceOrderStatus to, UUID userId) {
+        ServiceOrderStatusHistory entry = new ServiceOrderStatusHistory();
+        entry.setServiceOrder(order);
+        entry.setFromStatus(from);
+        entry.setToStatus(to);
+        entry.setChangedBy(userId == null ? null : users.getReferenceById(userId));
+        entry.setChangedAt(Instant.now());
+        history.save(entry);
     }
 
     private void restoreStock(ServiceOrder order, UUID userId) {

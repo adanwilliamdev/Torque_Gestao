@@ -55,6 +55,14 @@ public class ServiceOrder extends AuditedEntity {
     @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
+    /** Total já recebido (soma dos pagamentos); mantido em sincronia por {@code PaymentService}. */
+    @Column(name = "paid_amount", nullable = false, precision = 12, scale = 2)
+    private BigDecimal paidAmount = BigDecimal.ZERO;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status", nullable = false, length = 20)
+    private PaymentStatus paymentStatus = PaymentStatus.PENDENTE;
+
     @Column(name = "started_at")
     private Instant startedAt;
 
@@ -73,5 +81,27 @@ public class ServiceOrder extends AuditedEntity {
 
     public void recalculateTotal() {
         totalAmount = laborAmount.add(getPartsAmount());
+    }
+
+    /** Saldo em aberto (total da OS menos o já recebido). */
+    public BigDecimal getBalanceAmount() {
+        return totalAmount.subtract(paidAmount);
+    }
+
+    /** Soma um pagamento ao recebido e recalcula a situação financeira. */
+    public void applyPayment(BigDecimal amount) {
+        paidAmount = paidAmount.add(amount);
+        refreshPaymentStatus();
+    }
+
+    /** PENDENTE (nada pago), PARCIAL ou PAGA (nada a receber, inclusive OS de valor zero). */
+    public void refreshPaymentStatus() {
+        if (paidAmount.compareTo(totalAmount) >= 0 && status == ServiceOrderStatus.FINALIZADA) {
+            paymentStatus = PaymentStatus.PAGA;
+        } else if (paidAmount.signum() > 0) {
+            paymentStatus = PaymentStatus.PARCIAL;
+        } else {
+            paymentStatus = PaymentStatus.PENDENTE;
+        }
     }
 }

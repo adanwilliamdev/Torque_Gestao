@@ -4,6 +4,7 @@ import com.torquegestao.domain.Client;
 import com.torquegestao.dto.ClientRequest;
 import com.torquegestao.dto.ClientResponse;
 import com.torquegestao.dto.PageResponse;
+import com.torquegestao.exception.BusinessException;
 import com.torquegestao.exception.NotFoundException;
 import com.torquegestao.repository.ClientRepository;
 import com.torquegestao.repository.VehicleRepository;
@@ -32,6 +33,15 @@ public class ClientService {
     public Client getClient(UUID id) {
         return clients.findById(id)
                 .orElseThrow(() -> new NotFoundException("Cliente não encontrado com ID: " + id));
+    }
+
+    /** Cliente que ainda pode receber novos atendimentos (a exclusão é lógica). */
+    public Client getActiveClient(UUID id) {
+        Client client = getClient(id);
+        if (!client.isActive()) {
+            throw new BusinessException("Cliente inativo: " + client.getName());
+        }
+        return client;
     }
 
     @Transactional(readOnly = true)

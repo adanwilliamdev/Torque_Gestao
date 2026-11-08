@@ -1,5 +1,6 @@
 package com.torquegestao.dto;
 
+import com.torquegestao.domain.PaymentStatus;
 import com.torquegestao.domain.ServiceOrder;
 import com.torquegestao.domain.ServiceOrderStatus;
 import java.math.BigDecimal;
@@ -22,6 +23,9 @@ public record ServiceOrderResponse(
         BigDecimal laborAmount,
         BigDecimal partsAmount,
         BigDecimal totalAmount,
+        BigDecimal paidAmount,
+        BigDecimal balanceAmount,
+        PaymentStatus paymentStatus,
         List<ServiceOrderItemResponse> items,
         Instant startedAt,
         Instant completedAt,
@@ -45,6 +49,9 @@ public record ServiceOrderResponse(
                 o.getLaborAmount(),
                 o.getPartsAmount(),
                 o.getTotalAmount(),
+                o.getPaidAmount(),
+                o.getBalanceAmount(),
+                o.getPaymentStatus(),
                 o.getItems().stream().map(ServiceOrderItemResponse::from).toList(),
                 o.getStartedAt(),
                 o.getCompletedAt(),

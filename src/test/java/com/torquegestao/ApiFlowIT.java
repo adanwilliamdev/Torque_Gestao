@@ -12,9 +12,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.torquegestao.domain.Budget;
+import com.torquegestao.domain.BudgetStatus;
+import com.torquegestao.domain.Client;
 import com.torquegestao.domain.Role;
 import com.torquegestao.domain.User;
+import com.torquegestao.repository.BudgetRepository;
+import com.torquegestao.repository.ClientRepository;
 import com.torquegestao.repository.UserRepository;
+import com.torquegestao.service.BudgetService;
+import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -32,6 +39,9 @@ class ApiFlowIT extends AbstractIntegrationTest {
     @Autowired ObjectMapper json;
     @Autowired UserRepository users;
     @Autowired PasswordEncoder encoder;
+    @Autowired BudgetRepository budgetRepository;
+    @Autowired ClientRepository clientRepository;
+    @Autowired BudgetService budgetService;
 
     // ------------------------------------------------------------------ helpers
 
@@ -473,12 +483,14 @@ class ApiFlowIT extends AbstractIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /** Lança mão de obra na OS e cria o orçamento dela (o valor vem do total da OS). */
     private JsonNode orcamentoDaOs(String token, JsonNode order) throws Exception {
+        send("PATCH", "/api/service-orders/" + order.get("id").asText() + "/labor", token,
+                Map.of("laborAmount", "300.00")).andExpect(status().isOk());
         return created("/api/budgets", token, Map.of(
                 "clientId", order.get("clientId").asText(),
                 "vehicleId", order.get("vehicleId").asText(),
-                "serviceOrderId", order.get("id").asText(),
-                "totalAmount", "300.00"));
+                "serviceOrderId", order.get("id").asText()));
     }
 
     @Test
@@ -592,5 +604,323 @@ class ApiFlowIT extends AbstractIntegrationTest {
         mvc.perform(get("/clients"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(header().string("Location", org.hamcrest.Matchers.endsWith("/login")));
+    }
+
+    // ------------------------------------------------------------------ regras de negócio: orçamento
+
+    private JsonNode novoOrcamentoAvulso(String token, String validUntil) throws Exception {
+        JsonNode client = created("/api/clients", token, Map.of("name", "Cliente Orç"));
+        JsonNode vehicle = created("/api/vehicles", token, Map.of("plate", uniquePlate(), "brand", "Fiat",
+                "model", "Palio", "year", 2014, "clientId", client.get("id").asText()));
+        Map<String, Object> body = new java.util.HashMap<>();
+        body.put("clientId", client.get("id").asText());
+        body.put("vehicleId", vehicle.get("id").asText());
+        body.put("totalAmount", "100.00");
+        if (validUntil != null) {
+            body.put("validUntil", validUntil);
+        }
+        return created("/api/budgets", token, body);
+    }
+
+    private void vencer(String budgetId) {
+        Budget budget = budgetRepository.findById(UUID.fromString(budgetId)).orElseThrow();
+        budget.setValidUntil(Instant.now().minusSeconds(60));
+        budgetRepository.saveAndFlush(budget);
+    }
+
+    private BudgetStatus statusNoBanco(String budgetId) {
+        return budgetRepository.findById(UUID.fromString(budgetId)).orElseThrow().getStatus();
+    }
+
+    @Test
+    void orcamentoVencidoNaoEhAprovadoEFicaExpiradoNoBanco() throws Exception {
+        String admin = adminToken();
+        String id = novoOrcamentoAvulso(admin, Instant.now().plusSeconds(3600).toString()).get("id").asText();
+        vencer(id);
+
+        send("PATCH", "/api/budgets/" + id + "/approve", admin, null)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("Orçamento vencido: crie um novo orçamento")));
+
+        // a transação não é revertida: o orçamento foi gravado como expirado
+        org.junit.jupiter.api.Assertions.assertEquals(BudgetStatus.EXPIRADO, statusNoBanco(id));
+        send("GET", "/api/budgets/" + id, admin, null).andExpect(jsonPath("$.status", is("EXPIRADO")));
+    }
+
+    @Test
+    void leituraJaMostraPendenteVencidoComoExpirado() throws Exception {
+        String admin = adminToken();
+        String id = novoOrcamentoAvulso(admin, Instant.now().plusSeconds(3600).toString()).get("id").asText();
+        vencer(id);
+
+        send("GET", "/api/budgets/" + id, admin, null).andExpect(jsonPath("$.status", is("EXPIRADO")));
+        org.junit.jupiter.api.Assertions.assertEquals(BudgetStatus.PENDENTE, statusNoBanco(id));
+    }
+
+    @Test
+    void rotinaMarcaOrcamentosVencidosComoExpirados() throws Exception {
+        String admin = adminToken();
+        String vencido = novoOrcamentoAvulso(admin, Instant.now().plusSeconds(3600).toString()).get("id").asText();
+        String valido = novoOrcamentoAvulso(admin, Instant.now().plusSeconds(3600).toString()).get("id").asText();
+        vencer(vencido);
+
+        org.junit.jupiter.api.Assertions.assertTrue(budgetService.expireOverdue() >= 1);
+
+        org.junit.jupiter.api.Assertions.assertEquals(BudgetStatus.EXPIRADO, statusNoBanco(vencido));
+        org.junit.jupiter.api.Assertions.assertEquals(BudgetStatus.PENDENTE, statusNoBanco(valido));
+    }
+
+    @Test
+    void validadeNoPassadoEhRecusadaNaCriacao() throws Exception {
+        String admin = adminToken();
+        JsonNode client = created("/api/clients", admin, Map.of("name", "Cliente Validade"));
+        JsonNode vehicle = created("/api/vehicles", admin, Map.of("plate", uniquePlate(), "brand", "Fiat",
+                "model", "Palio", "year", 2014, "clientId", client.get("id").asText()));
+
+        send("POST", "/api/budgets", admin, Map.of("clientId", client.get("id").asText(),
+                        "vehicleId", vehicle.get("id").asText(), "totalAmount", "100.00",
+                        "validUntil", Instant.now().minusSeconds(60).toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("A validade do orçamento deve ser uma data futura")));
+    }
+
+    @Test
+    void orcamentoDeUmaOsUsaOTotalDelaEBarraDivergenciaEDuplicidade() throws Exception {
+        String admin = adminToken();
+        JsonNode order = novaOrdem(admin, null);
+        String orderId = order.get("id").asText();
+
+        JsonNode budget = orcamentoDaOs(admin, order);
+        org.junit.jupiter.api.Assertions.assertEquals(0,
+                new java.math.BigDecimal("300.00").compareTo(new java.math.BigDecimal(budget.get("totalAmount").asText())));
+
+        // segundo orçamento ativo para a mesma OS
+        send("POST", "/api/budgets", admin, Map.of("clientId", order.get("clientId").asText(),
+                        "vehicleId", order.get("vehicleId").asText(), "serviceOrderId", orderId))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("Já existe um orçamento ativo para a OS " + order.get("orderNumber").asText())));
+
+        // valor informado diferente do total da OS
+        JsonNode outra = novaOrdem(admin, null);
+        send("PATCH", "/api/service-orders/" + outra.get("id").asText() + "/labor", admin, Map.of("laborAmount", "300.00"))
+                .andExpect(status().isOk());
+        send("POST", "/api/budgets", admin, Map.of("clientId", outra.get("clientId").asText(),
+                        "vehicleId", outra.get("vehicleId").asText(), "serviceOrderId", outra.get("id").asText(),
+                        "totalAmount", "999.00"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("O valor informado (R$ 999.00) difere do total da OS (R$ 300.00)")));
+    }
+
+    @Test
+    void orcamentoExpiradoLiberaONovoOrcamentoDaOs() throws Exception {
+        String admin = adminToken();
+        JsonNode order = novaOrdem(admin, null);
+        JsonNode primeiro = orcamentoDaOs(admin, order);
+        budgetRepository.findById(UUID.fromString(primeiro.get("id").asText())).ifPresent(b -> {
+            b.setStatus(BudgetStatus.EXPIRADO);
+            budgetRepository.saveAndFlush(b);
+        });
+
+        created("/api/budgets", admin, Map.of("clientId", order.get("clientId").asText(),
+                "vehicleId", order.get("vehicleId").asText(), "serviceOrderId", order.get("id").asText()));
+    }
+
+    @Test
+    void osAlteradaDepoisDoOrcamentoNaoAprovaAteSincronizar() throws Exception {
+        String admin = adminToken();
+        JsonNode order = novaOrdem(admin, null);
+        String orderId = order.get("id").asText();
+        mudarStatus(admin, orderId, "EM_DIAGNOSTICO");
+        mudarStatus(admin, orderId, "AGUARDANDO_APROVACAO");
+        String budgetId = orcamentoDaOs(admin, order).get("id").asText();
+
+        send("PATCH", "/api/service-orders/" + orderId + "/labor", admin, Map.of("laborAmount", "350.00"))
+                .andExpect(status().isOk());
+
+        send("PATCH", "/api/budgets/" + budgetId + "/approve", admin, null)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", org.hamcrest.Matchers.containsString("O total da OS mudou")));
+
+        send("PATCH", "/api/budgets/" + budgetId + "/sync-order-total", admin, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalAmount", amount("350.00")));
+        send("PATCH", "/api/budgets/" + budgetId + "/approve", admin, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("APROVADO")));
+        send("GET", "/api/service-orders/" + orderId, admin, null).andExpect(jsonPath("$.status", is("APROVADA")));
+    }
+
+    // ------------------------------------------------------------------ regras de negócio: consistência e inativos
+
+    @Test
+    void naoSeAbreOsComVeiculoDeOutroCliente() throws Exception {
+        String admin = adminToken();
+        JsonNode clienteA = created("/api/clients", admin, Map.of("name", "Cliente A"));
+        JsonNode clienteB = created("/api/clients", admin, Map.of("name", "Cliente B"));
+        String placa = uniquePlate();
+        JsonNode carroDeB = created("/api/vehicles", admin, Map.of("plate", placa, "brand", "Fiat",
+                "model", "Uno", "year", 2012, "clientId", clienteB.get("id").asText()));
+
+        send("POST", "/api/service-orders", admin, Map.of("clientId", clienteA.get("id").asText(),
+                        "vehicleId", carroDeB.get("id").asText()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("O veículo " + placa + " não pertence ao cliente informado")));
+        send("POST", "/api/budgets", admin, Map.of("clientId", clienteA.get("id").asText(),
+                        "vehicleId", carroDeB.get("id").asText(), "totalAmount", "100.00"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void naoSeAbreOsParaClienteVeiculoOuMecanicoInativos() throws Exception {
+        String admin = adminToken();
+        JsonNode client = created("/api/clients", admin, Map.of("name", "Cliente Inativo"));
+        JsonNode vehicle = created("/api/vehicles", admin, Map.of("plate", uniquePlate(), "brand", "Fiat",
+                "model", "Uno", "year", 2012, "clientId", client.get("id").asText()));
+        JsonNode mechanic = created("/api/mechanics", admin, Map.of("name", "Mecânico Inativo"));
+        Map<String, Object> body = Map.of("clientId", client.get("id").asText(),
+                "vehicleId", vehicle.get("id").asText(), "mechanicId", mechanic.get("id").asText());
+
+        // mecânico desativado
+        send("DELETE", "/api/mechanics/" + mechanic.get("id").asText(), admin, null).andExpect(status().is2xxSuccessful());
+        send("POST", "/api/service-orders", admin, body)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("Mecânico inativo: Mecânico Inativo")));
+
+        // cliente desativado
+        Client entity = clientRepository.findById(UUID.fromString(client.get("id").asText())).orElseThrow();
+        entity.setActive(false);
+        clientRepository.saveAndFlush(entity);
+        send("POST", "/api/service-orders", admin, Map.of("clientId", client.get("id").asText(),
+                        "vehicleId", vehicle.get("id").asText()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("Cliente inativo: Cliente Inativo")));
+    }
+
+    // ------------------------------------------------------------------ regras de negócio: mão de obra
+
+    @Test
+    void mecanicoLancaPecasMasNaoAlteraAMaoDeObra() throws Exception {
+        String admin = adminToken();
+        User mecUser = createUser(Role.MECHANIC);
+        JsonNode mechanic = created("/api/mechanics", admin, Map.of("name", "Zé", "userId", mecUser.getId().toString()));
+        String orderId = novaOrdem(admin, mechanic.get("id").asText()).get("id").asText();
+        String partId = novaPeca(admin, 10, "20.00").get("id").asText();
+        String token = tokenFor(mecUser);
+
+        send("PATCH", "/api/service-orders/" + orderId + "/labor", token, Map.of("laborAmount", "1.00"))
+                .andExpect(status().isForbidden());
+        send("POST", "/api/service-orders/" + orderId + "/items", token, Map.of("partId", partId, "quantity", 1))
+                .andExpect(status().isCreated());
+        send("PATCH", "/api/service-orders/" + orderId + "/labor", tokenFor(createUser(Role.RECEPTIONIST)),
+                Map.of("laborAmount", "80.00"))
+                .andExpect(status().isOk());
+    }
+
+    // ------------------------------------------------------------------ regras de negócio: pagamentos
+
+    @Test
+    void pagamentosParciaisAteQuitarAOs() throws Exception {
+        String admin = adminToken();
+        String orderId = novaOrdem(admin, null).get("id").asText();
+        send("PATCH", "/api/service-orders/" + orderId + "/labor", admin, Map.of("laborAmount", "100.00"))
+                .andExpect(status().isOk());
+
+        // OS ainda aberta não recebe pagamento
+        send("POST", "/api/service-orders/" + orderId + "/payments", admin, Map.of("amount", "10.00", "method", "PIX"))
+                .andExpect(status().isBadRequest());
+
+        for (String status : new String[] {"EM_DIAGNOSTICO", "AGUARDANDO_APROVACAO", "APROVADA", "EM_EXECUCAO", "FINALIZADA"}) {
+            mudarStatus(admin, orderId, status);
+        }
+        send("GET", "/api/service-orders/" + orderId, admin, null)
+                .andExpect(jsonPath("$.paymentStatus", is("PENDENTE")))
+                .andExpect(jsonPath("$.balanceAmount", amount("100.00")));
+
+        send("POST", "/api/service-orders/" + orderId + "/payments", admin,
+                        Map.of("amount", "40.00", "method", "PIX", "notes", "Sinal"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.amount", amount("40.00")))
+                .andExpect(jsonPath("$.method", is("PIX")));
+        send("GET", "/api/service-orders/" + orderId, admin, null)
+                .andExpect(jsonPath("$.paymentStatus", is("PARCIAL")))
+                .andExpect(jsonPath("$.paidAmount", amount("40.00")))
+                .andExpect(jsonPath("$.balanceAmount", amount("60.00")));
+
+        send("POST", "/api/service-orders/" + orderId + "/payments", admin, Map.of("amount", "70.00", "method", "DINHEIRO"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("O valor excede o saldo em aberto (R$ 60.00)")));
+
+        send("POST", "/api/service-orders/" + orderId + "/payments", admin, Map.of("amount", "60.00", "method", "DINHEIRO"))
+                .andExpect(status().isCreated());
+        send("GET", "/api/service-orders/" + orderId, admin, null)
+                .andExpect(jsonPath("$.paymentStatus", is("PAGA")))
+                .andExpect(jsonPath("$.balanceAmount", amount("0")));
+        send("POST", "/api/service-orders/" + orderId + "/payments", admin, Map.of("amount", "1.00", "method", "PIX"))
+                .andExpect(status().isBadRequest());
+
+        send("GET", "/api/service-orders/" + orderId + "/payments", admin, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()", is(2)));
+    }
+
+    @Test
+    void validacaoDoPagamentoEPermissoes() throws Exception {
+        String admin = adminToken();
+        String orderId = novaOrdem(admin, null).get("id").asText();
+
+        send("POST", "/api/service-orders/" + orderId + "/payments", admin, Map.of("amount", "0", "method", "PIX"))
+                .andExpect(status().isUnprocessableEntity());
+        send("POST", "/api/service-orders/" + orderId + "/payments", admin, Map.of("amount", "10.00"))
+                .andExpect(status().isUnprocessableEntity());
+        send("POST", "/api/service-orders/" + orderId + "/payments", tokenFor(createUser(Role.MECHANIC)),
+                        Map.of("amount", "10.00", "method", "PIX"))
+                .andExpect(status().isForbidden());
+        send("GET", "/api/service-orders/" + orderId + "/payments", tokenFor(createUser(Role.MECHANIC)), null)
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void osFinalizadaSemValorJaFicaQuitada() throws Exception {
+        String admin = adminToken();
+        String orderId = novaOrdem(admin, null).get("id").asText();
+        for (String status : new String[] {"EM_DIAGNOSTICO", "AGUARDANDO_APROVACAO", "APROVADA", "EM_EXECUCAO", "FINALIZADA"}) {
+            mudarStatus(admin, orderId, status);
+        }
+
+        send("GET", "/api/service-orders/" + orderId, admin, null).andExpect(jsonPath("$.paymentStatus", is("PAGA")));
+    }
+
+    // ------------------------------------------------------------------ regras de negócio: histórico de status
+
+    @Test
+    void historicoRegistraAberturaEMudancasComOAutor() throws Exception {
+        String admin = adminToken();
+        String orderId = novaOrdem(admin, null).get("id").asText();
+        mudarStatus(admin, orderId, "EM_DIAGNOSTICO");
+        mudarStatus(admin, orderId, "CANCELADA");
+
+        send("GET", "/api/service-orders/" + orderId + "/history", admin, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()", is(3)))
+                .andExpect(jsonPath("$[0].fromStatus", is(org.hamcrest.Matchers.nullValue())))
+                .andExpect(jsonPath("$[0].toStatus", is("CRIADA")))
+                .andExpect(jsonPath("$[1].fromStatus", is("CRIADA")))
+                .andExpect(jsonPath("$[1].toStatus", is("EM_DIAGNOSTICO")))
+                .andExpect(jsonPath("$[2].toStatus", is("CANCELADA")))
+                .andExpect(jsonPath("$[2].changedByName", is("Usuário ADMIN")))
+                .andExpect(jsonPath("$[2].changedAt").isNotEmpty());
+    }
+
+    @Test
+    void mecanicoSoVeOHistoricoDaPropriaOs() throws Exception {
+        String admin = adminToken();
+        User mecUser = createUser(Role.MECHANIC);
+        JsonNode mechanic = created("/api/mechanics", admin, Map.of("name", "Zé", "userId", mecUser.getId().toString()));
+        String minha = novaOrdem(admin, mechanic.get("id").asText()).get("id").asText();
+        String outra = novaOrdem(admin, null).get("id").asText();
+        String token = tokenFor(mecUser);
+
+        send("GET", "/api/service-orders/" + minha + "/history", token, null).andExpect(status().isOk());
+        send("GET", "/api/service-orders/" + outra + "/history", token, null).andExpect(status().isForbidden());
     }
 }

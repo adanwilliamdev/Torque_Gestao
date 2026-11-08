@@ -2,6 +2,7 @@ package com.torquegestao.web;
 
 import com.torquegestao.config.AppProperties;
 import com.torquegestao.domain.BudgetStatus;
+import com.torquegestao.domain.PaymentStatus;
 import com.torquegestao.domain.ServiceOrderStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -65,6 +66,15 @@ public class Fmt {
             case APROVADO -> "moss";
             case RECUSADO -> "rust";
             case EXPIRADO -> "neutral";
+        };
+    }
+
+    /** Cor do badge da situação financeira de uma OS. */
+    public String paymentTone(PaymentStatus status) {
+        return switch (status) {
+            case PENDENTE -> "amber";
+            case PARCIAL -> "amber-soft";
+            case PAGA -> "moss";
         };
     }
 }

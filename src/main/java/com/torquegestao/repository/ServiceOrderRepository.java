@@ -2,6 +2,7 @@ package com.torquegestao.repository;
 
 import com.torquegestao.domain.ServiceOrder;
 import com.torquegestao.domain.ServiceOrderStatus;
+import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -11,6 +12,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -40,6 +42,11 @@ public interface ServiceOrderRepository extends JpaRepository<ServiceOrder, UUID
 
     @EntityGraph(attributePaths = {"client", "vehicle", "mechanic"})
     Page<ServiceOrder> findByStatus(ServiceOrderStatus status, Pageable pageable);
+
+    /** Trava a linha da OS até o fim da transação: pagamentos concorrentes não estouram o saldo. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select o from ServiceOrder o where o.id = :id")
+    Optional<ServiceOrder> findForUpdateById(@Param("id") UUID id);
 
     long countByStatusIn(Collection<ServiceOrderStatus> statuses);
 

@@ -57,6 +57,8 @@ app:
   login-rate-limit-attempts: ${LOGIN_RATE_LIMIT_ATTEMPTS:10}
   login-rate-limit-window-seconds: ${LOGIN_RATE_LIMIT_WINDOW_SECONDS:60}
   dashboard-cache-ttl-seconds: ${DASHBOARD_CACHE_TTL_SECONDS:30}
+  # Intervalo (ISO-8601) da rotina que marca como expirados os orçamentos pendentes vencidos
+  budget-expiration-interval: ${BUDGET_EXPIRATION_INTERVAL:PT15M}
   seed:
     enabled: ${SEED_ENABLED:true}
     admin-email: ${SEED_ADMIN_EMAIL:admin@torquegestao.com}

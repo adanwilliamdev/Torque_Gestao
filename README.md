@@ -159,6 +159,10 @@ Uma ordem aberta pode ser direcionada para `CANCELADA`, respeitando as regras de
 - A aprovação de um orçamento vinculado move a ordem de serviço de `AGUARDANDO_APROVACAO` para `APROVADA`.
 - A recusa do orçamento cancela a ordem vinculada e devolve as peças ao estoque.
 - Decisões incompatíveis com o estado atual da ordem são rejeitadas sem alterações nos dados.
+- **Validade:** um orçamento pendente com `validUntil` vencido é marcado como `EXPIRADO` por uma rotina agendada (`app.budget-expiration-interval`, padrão 15 min). Entre as execuções, a leitura já o exibe como expirado e a aprovação/recusa é recusada, gravando o status `EXPIRADO` no ato. A validade informada na criação precisa ser futura.
+- **Valor ligado à OS:** em orçamento vinculado a uma OS, o valor é o total da OS (um valor informado diferente é recusado). Se o total da OS mudar depois, a aprovação é bloqueada até `PATCH /api/budgets/{id}/sync-order-total` atualizar o valor.
+- **Um orçamento ativo por OS:** pendente ou aprovado. Orçamentos expirados ou recusados liberam a OS para um novo orçamento (índice único parcial no banco).
+- **Consistência:** a OS vinculada precisa ser do mesmo cliente e veículo do orçamento e não pode estar finalizada ou cancelada.
 
 Essas operações são executadas dentro de transações para manter a consistência entre orçamento, ordem de serviço e estoque.
 
@@ -169,8 +173,22 @@ Essas operações são executadas dentro de transações para manter a consistê
 - O total da ordem é recalculado conforme os lançamentos de peças e mão de obra.
 - A remoção de peças ou o cancelamento da ordem gera estornos rastreáveis.
 - Ordens finalizadas ou canceladas não permitem novas alterações de peças, mão de obra ou mecânico atribuído.
+- **Cadastros válidos:** uma OS só abre com cliente, veículo e mecânico ativos, e o veículo precisa pertencer ao cliente informado.
+- **Mão de obra:** o valor só pode ser alterado por `ADMIN`, `MANAGER` e `RECEPTIONIST`; o mecânico lança e remove peças, mas não altera o valor cobrado.
 
 O controle de concorrência otimista protege o saldo contra atualizações simultâneas conflitantes. Quando uma atualização não pode ser aplicada com segurança, a operação pode retornar HTTP `409 Conflict`.
+
+### Pagamentos
+
+- Pagamentos (total ou parcial, com forma de pagamento) só são aceitos em OS `FINALIZADA`, quando o total já está travado.
+- A soma dos pagamentos nunca passa do total; a linha da OS é travada durante o registro para que pagamentos simultâneos não estourem o saldo.
+- A situação financeira é independente do status operacional: `PENDENTE`, `PARCIAL` ou `PAGA` (OS finalizada sem valor já nasce `PAGA`).
+- Formas aceitas: dinheiro, Pix, cartão de débito, cartão de crédito e transferência.
+- Registro e consulta: `ADMIN`, `MANAGER` e `RECEPTIONIST`. O mecânico não vê nem registra pagamentos.
+
+### Histórico de status
+
+Toda abertura e mudança de status da OS (inclusive as causadas por decisão de orçamento) grava quem fez, de qual status para qual e quando, em `service_order_status_history`. A linha do tempo aparece na tela de faturamento e em `GET /api/service-orders/{id}/history`; o mecânico só enxerga o histórico das ordens atribuídas a ele.
 
 ### Numeração e exclusões
 
@@ -198,8 +216,8 @@ O Torque Gestão implementa diferentes mecanismos de proteção para a interface
 |---|---|
 | `ADMIN` | Acesso completo e gerenciamento de usuários. |
 | `MANAGER` | Dashboard, estoque, mecânicos, clientes, acompanhamento de ordens e decisões sobre orçamentos. |
-| `RECEPTIONIST` | Gestão de clientes e veículos, abertura de ordens e orçamentos e consulta de mecânicos. |
-| `MECHANIC` | Consulta e atualização das ordens atribuídas, incluindo peças e mão de obra. |
+| `RECEPTIONIST` | Gestão de clientes e veículos, abertura de ordens e orçamentos, mão de obra, pagamentos e consulta de mecânicos. |
+| `MECHANIC` | Consulta e atualização das ordens atribuídas, incluindo o lançamento de peças (não altera mão de obra nem vê pagamentos). |
 
 O sistema não possui autocadastro. As contas são criadas por um administrador através do endpoint `POST /api/auth/users`.
 
@@ -259,7 +277,11 @@ erDiagram
     PARTS ||--o{ SERVICE_ORDER_ITEMS : utilizada
     PARTS ||--o{ INVENTORY_MOVEMENTS : movimenta
     USERS ||--o{ INVENTORY_MOVEMENTS : registra
-    SERVICE_ORDERS ||--o| BUDGETS : orcamento
+    SERVICE_ORDERS ||--o{ BUDGETS : orcamentos
+    SERVICE_ORDERS ||--o{ PAYMENTS : recebe
+    SERVICE_ORDERS ||--o{ SERVICE_ORDER_STATUS_HISTORY : historico
+    USERS ||--o{ SERVICE_ORDER_STATUS_HISTORY : move
+    USERS ||--o{ PAYMENTS : registra
     CLIENTS ||--o{ BUDGETS : recebe
     VEHICLES ||--o{ BUDGETS : refere
     USERS ||--o{ REFRESH_TOKENS : possui
@@ -271,7 +293,7 @@ A aplicação possui testes unitários e de integração para validar regras de 
 
 | Tipo | Cobertura | Execução |
 |---|---|---|
-| Unitários | Regras das ordens, cancelamentos, estornos e permissões | `mvn test` |
+| Unitários | Regras das ordens, orçamentos (validade, valor x OS), pagamentos, histórico, cadastros inativos, cancelamentos, estornos e permissões | `mvn test` |
 | Integração | API, segurança por perfil, paginação e interface web | `mvn verify` |
 | Concorrência | Atualizações simultâneas de estoque | `mvn verify` |
 
@@ -357,6 +379,7 @@ As configurações podem ser ajustadas sem alterar o código-fonte.
 | `SEED_ADMIN_EMAIL` | `admin@torquegestao.com` | E-mail do administrador inicial. |
 | `SEED_ADMIN_PASSWORD` | Vazio | Senha inicial do administrador. |
 | `APP_TIMEZONE` | `America/Sao_Paulo` | Fuso horário da aplicação. |
+| `BUDGET_EXPIRATION_INTERVAL` | `PT15M` | Intervalo (ISO-8601) da rotina que expira orçamentos vencidos. |
 
 Em produção, configure `ENVIRONMENT=production`, utilize um `JWT_SECRET` forte com pelo menos 32 caracteres e defina uma senha inicial segura quando o seed do administrador for necessário.
 

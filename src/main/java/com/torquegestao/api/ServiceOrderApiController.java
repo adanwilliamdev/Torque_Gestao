@@ -3,12 +3,16 @@ package com.torquegestao.api;
 import com.torquegestao.domain.ServiceOrderStatus;
 import com.torquegestao.dto.LaborAmountRequest;
 import com.torquegestao.dto.PageResponse;
+import com.torquegestao.dto.PaymentRequest;
+import com.torquegestao.dto.PaymentResponse;
 import com.torquegestao.dto.ServiceOrderItemRequest;
 import com.torquegestao.dto.ServiceOrderRequest;
 import com.torquegestao.dto.ServiceOrderResponse;
+import com.torquegestao.dto.StatusHistoryResponse;
 import com.torquegestao.dto.StatusUpdateRequest;
 import com.torquegestao.security.Access;
 import com.torquegestao.security.AppUserDetails;
+import com.torquegestao.service.PaymentService;
 import com.torquegestao.service.ServiceOrderService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -40,16 +44,19 @@ import org.springframework.web.bind.annotation.RestController;
 public class ServiceOrderApiController {
 
     private final ServiceOrderService orders;
+    private final PaymentService payments;
 
-    public ServiceOrderApiController(ServiceOrderService orders) {
+    public ServiceOrderApiController(ServiceOrderService orders, PaymentService payments) {
         this.orders = orders;
+        this.payments = payments;
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize(Access.ORDER_CREATE)
-    public ServiceOrderResponse create(@Valid @RequestBody ServiceOrderRequest data) {
-        return orders.create(data);
+    public ServiceOrderResponse create(
+            @Valid @RequestBody ServiceOrderRequest data, @AuthenticationPrincipal AppUserDetails user) {
+        return orders.create(data, user.getId());
     }
 
     @GetMapping
@@ -91,6 +98,13 @@ public class ServiceOrderApiController {
         return orders.get(id, user);
     }
 
+    /** Linha do tempo de status: quem moveu a OS, de qual para qual status e quando. */
+    @GetMapping("/{id}/history")
+    @PreAuthorize(Access.ORDER_VIEW)
+    public List<StatusHistoryResponse> history(@PathVariable UUID id, @AuthenticationPrincipal AppUserDetails user) {
+        return orders.history(id, user);
+    }
+
     @PatchMapping("/{id}/status")
     @PreAuthorize(Access.ORDER_STATUS)
     public ServiceOrderResponse updateStatus(
@@ -126,11 +140,30 @@ public class ServiceOrderApiController {
     }
 
     @PatchMapping("/{id}/labor")
-    @PreAuthorize(Access.ORDER_BILLING)
+    @PreAuthorize(Access.ORDER_LABOR)
     public ServiceOrderResponse updateLabor(
             @PathVariable UUID id,
             @Valid @RequestBody LaborAmountRequest data,
             @AuthenticationPrincipal AppUserDetails user) {
         return orders.updateLaborAmount(id, data.laborAmount(), user);
+    }
+
+    // ------------------------------------------------------------------ pagamentos
+
+    @GetMapping("/{id}/payments")
+    @PreAuthorize(Access.PAYMENT_READ)
+    public List<PaymentResponse> listPayments(@PathVariable UUID id) {
+        return payments.list(id);
+    }
+
+    /** Registra um pagamento (total ou parcial) numa OS finalizada; a soma não pode passar do total. */
+    @PostMapping("/{id}/payments")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize(Access.PAYMENT_WRITE)
+    public PaymentResponse registerPayment(
+            @PathVariable UUID id,
+            @Valid @RequestBody PaymentRequest data,
+            @AuthenticationPrincipal AppUserDetails user) {
+        return payments.register(id, data, user.getId());
     }
 }

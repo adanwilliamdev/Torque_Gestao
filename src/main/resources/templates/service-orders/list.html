@@ -49,7 +49,10 @@
                     <td class="col-grow" th:text="${o.vehicleInfo()}">Veículo</td>
                     <td class="col-grow" th:text="${@fmt.dash(o.mechanicName())}">—</td>
                     <td class="col-fit"><span class="badge" th:classappend="${@fmt.orderTone(o.status())}"
-                              th:text="${o.status().label}">Criada</span></td>
+                              th:text="${o.status().label}">Criada</span>
+                        <span class="badge" th:if="${o.status().name() == 'FINALIZADA'}"
+                              th:classappend="${@fmt.paymentTone(o.paymentStatus())}"
+                              th:text="${o.paymentStatus().label}">Pagamento pendente</span></td>
                     <td class="num mono col-fit num" th:text="${@fmt.currency(o.totalAmount())}">R$ 0,00</td>
                     <td class="col-actions">
                         <div class="row-menu">

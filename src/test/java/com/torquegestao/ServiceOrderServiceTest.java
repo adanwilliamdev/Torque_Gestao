@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -14,16 +15,21 @@ import static org.mockito.Mockito.when;
 import com.torquegestao.domain.Client;
 import com.torquegestao.domain.Mechanic;
 import com.torquegestao.domain.Part;
+import com.torquegestao.domain.PaymentStatus;
 import com.torquegestao.domain.Role;
 import com.torquegestao.domain.ServiceOrder;
 import com.torquegestao.domain.ServiceOrderItem;
 import com.torquegestao.domain.ServiceOrderStatus;
+import com.torquegestao.domain.ServiceOrderStatusHistory;
 import com.torquegestao.domain.User;
 import com.torquegestao.domain.Vehicle;
+import com.torquegestao.dto.ServiceOrderRequest;
 import com.torquegestao.dto.StatusUpdateRequest;
 import com.torquegestao.exception.BusinessException;
 import com.torquegestao.exception.ForbiddenException;
 import com.torquegestao.repository.ServiceOrderRepository;
+import com.torquegestao.repository.ServiceOrderStatusHistoryRepository;
+import com.torquegestao.repository.UserRepository;
 import com.torquegestao.security.AppUserDetails;
 import com.torquegestao.service.ClientService;
 import com.torquegestao.service.InventoryService;
@@ -35,6 +41,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -47,6 +54,8 @@ class ServiceOrderServiceTest {
     @Mock VehicleService vehicleService;
     @Mock MechanicService mechanicService;
     @Mock InventoryService inventory;
+    @Mock ServiceOrderStatusHistoryRepository history;
+    @Mock UserRepository users;
 
     ServiceOrderService service;
 
@@ -55,7 +64,8 @@ class ServiceOrderServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ServiceOrderService(orders, clientService, vehicleService, mechanicService, inventory);
+        service = new ServiceOrderService(
+                orders, clientService, vehicleService, mechanicService, inventory, history, users);
     }
 
     // ------------------------------------------------------------------ helpers
@@ -248,5 +258,138 @@ class ServiceOrderServiceTest {
         assertThrows(BusinessException.class, () -> service.applyBudgetDecision(orderId, true, admin.getId()));
 
         assertEquals(ServiceOrderStatus.EM_DIAGNOSTICO, order.getStatus());
+    }
+
+    // ------------------------------------------------------------------ histórico de status
+
+    @Test
+    void mudarStatusRegistraDeParaEOUsuario() {
+        order(ServiceOrderStatus.APROVADA);
+
+        service.updateStatus(orderId, new StatusUpdateRequest(ServiceOrderStatus.EM_EXECUCAO, null), admin);
+
+        ArgumentCaptor<ServiceOrderStatusHistory> captor = ArgumentCaptor.forClass(ServiceOrderStatusHistory.class);
+        verify(history).save(captor.capture());
+        assertEquals(ServiceOrderStatus.APROVADA, captor.getValue().getFromStatus());
+        assertEquals(ServiceOrderStatus.EM_EXECUCAO, captor.getValue().getToStatus());
+        assertNotNull(captor.getValue().getChangedAt());
+        verify(users).getReferenceById(admin.getId());
+    }
+
+    @Test
+    void decisaoDeOrcamentoTambemEntraNoHistorico() {
+        order(ServiceOrderStatus.AGUARDANDO_APROVACAO);
+
+        service.applyBudgetDecision(orderId, true, admin.getId());
+
+        ArgumentCaptor<ServiceOrderStatusHistory> captor = ArgumentCaptor.forClass(ServiceOrderStatusHistory.class);
+        verify(history).save(captor.capture());
+        assertEquals(ServiceOrderStatus.APROVADA, captor.getValue().getToStatus());
+    }
+
+    @Test
+    void statusRepetidoOuSoDiagnosticoNaoGeramHistorico() {
+        order(ServiceOrderStatus.EM_DIAGNOSTICO);
+
+        service.updateStatus(orderId, new StatusUpdateRequest(ServiceOrderStatus.EM_DIAGNOSTICO, "Correia gasta"), admin);
+        assertThrows(BusinessException.class, () ->
+                service.updateStatus(orderId, new StatusUpdateRequest(ServiceOrderStatus.EM_DIAGNOSTICO, null), admin));
+
+        verifyNoInteractions(history);
+    }
+
+    @Test
+    void transicaoInvalidaNaoGeraHistorico() {
+        order(ServiceOrderStatus.CRIADA);
+
+        assertThrows(BusinessException.class, () ->
+                service.updateStatus(orderId, new StatusUpdateRequest(ServiceOrderStatus.FINALIZADA, null), admin));
+
+        verifyNoInteractions(history);
+    }
+
+    @Test
+    void abrirOsRegistraAberturaNoHistorico() {
+        UUID clientId = UUID.randomUUID();
+        UUID vehicleId = UUID.randomUUID();
+        Client client = new Client();
+        client.setId(clientId);
+        client.setName("Cliente");
+        Vehicle vehicle = new Vehicle();
+        vehicle.setId(vehicleId);
+        vehicle.setBrand("Fiat");
+        vehicle.setModel("Uno");
+        vehicle.setPlate("ABC1D23");
+        when(clientService.getActiveClient(clientId)).thenReturn(client);
+        when(vehicleService.getActiveVehicleOf(vehicleId, clientId)).thenReturn(vehicle);
+        when(orders.nextOrderSequence()).thenReturn(1L);
+
+        service.create(new ServiceOrderRequest(clientId, vehicleId, null, "Barulho"), admin.getId());
+
+        ArgumentCaptor<ServiceOrderStatusHistory> captor = ArgumentCaptor.forClass(ServiceOrderStatusHistory.class);
+        verify(history).save(captor.capture());
+        assertNull(captor.getValue().getFromStatus());
+        assertEquals(ServiceOrderStatus.CRIADA, captor.getValue().getToStatus());
+    }
+
+    // ------------------------------------------------------------------ cliente/veículo/mecânico válidos
+
+    @Test
+    void osNaoEhCriadaComVeiculoQueNaoEhDoCliente() {
+        UUID clientId = UUID.randomUUID();
+        UUID vehicleId = UUID.randomUUID();
+        Client client = new Client();
+        client.setId(clientId);
+        when(clientService.getActiveClient(clientId)).thenReturn(client);
+        when(vehicleService.getActiveVehicleOf(vehicleId, clientId))
+                .thenThrow(new BusinessException("O veículo ABC1D23 não pertence ao cliente informado"));
+
+        assertThrows(BusinessException.class, () ->
+                service.create(new ServiceOrderRequest(clientId, vehicleId, null, null), admin.getId()));
+
+        verify(orders, never()).saveAndFlush(any());
+        verifyNoInteractions(history);
+    }
+
+    @Test
+    void osNaoEhCriadaParaClienteInativo() {
+        UUID clientId = UUID.randomUUID();
+        when(clientService.getActiveClient(clientId)).thenThrow(new BusinessException("Cliente inativo: Fulano"));
+
+        assertThrows(BusinessException.class, () ->
+                service.create(new ServiceOrderRequest(clientId, UUID.randomUUID(), null, null), admin.getId()));
+
+        verify(orders, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void naoSeAtribuiMecanicoInativo() {
+        order(ServiceOrderStatus.CRIADA);
+        UUID mechanicId = UUID.randomUUID();
+        when(mechanicService.getActiveMechanic(mechanicId)).thenThrow(new BusinessException("Mecânico inativo: Zé"));
+
+        assertThrows(BusinessException.class, () -> service.assignMechanic(orderId, mechanicId));
+    }
+
+    // ------------------------------------------------------------------ situação financeira
+
+    @Test
+    void finalizarOsSemValorJaNasceQuitada() {
+        ServiceOrder order = order(ServiceOrderStatus.EM_EXECUCAO);
+
+        service.updateStatus(orderId, new StatusUpdateRequest(ServiceOrderStatus.FINALIZADA, null), admin);
+
+        assertEquals(PaymentStatus.PAGA, order.getPaymentStatus());
+    }
+
+    @Test
+    void finalizarOsComValorMantemPagamentoPendente() {
+        ServiceOrder order = order(ServiceOrderStatus.EM_EXECUCAO);
+        order.setLaborAmount(new java.math.BigDecimal("100.00"));
+        order.recalculateTotal();
+
+        service.updateStatus(orderId, new StatusUpdateRequest(ServiceOrderStatus.FINALIZADA, null), admin);
+
+        assertEquals(PaymentStatus.PENDENTE, order.getPaymentStatus());
     }
 }

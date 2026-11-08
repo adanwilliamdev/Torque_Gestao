@@ -31,7 +31,8 @@ public class Budget extends AuditedEntity {
     @JoinColumn(name = "vehicle_id", nullable = false)
     private Vehicle vehicle;
 
-    @Column(name = "service_order_id", unique = true)
+    /** Uma OS pode ter vários orçamentos ao longo do tempo, mas só um ativo (índice parcial no banco). */
+    @Column(name = "service_order_id")
     private UUID serviceOrderId;
 
     private String description;
@@ -45,4 +46,14 @@ public class Budget extends AuditedEntity {
 
     @Column(name = "valid_until")
     private Instant validUntil;
+
+    /** Pendente e com a validade já vencida em {@code now}. */
+    public boolean isExpiredAt(Instant now) {
+        return status == BudgetStatus.PENDENTE && validUntil != null && validUntil.isBefore(now);
+    }
+
+    /** Status exibido: um pendente vencido já aparece como expirado, mesmo antes da rotina gravar. */
+    public BudgetStatus getEffectiveStatus() {
+        return isExpiredAt(Instant.now()) ? BudgetStatus.EXPIRADO : status;
+    }
 }
