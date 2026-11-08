@@ -18,6 +18,11 @@ jobs:
           java-version: "21"
           cache: maven
 
+      # Os runners novos têm um Docker que recusa a API 1.32 usada pelo Testcontainers 1.19.x
+      # ("client version 1.32 is too old"). Fixar a versão da API resolve sem trocar dependências.
+      - name: Ajustar versão da API do Docker para o Testcontainers
+        run: echo "api.version=1.44" >> ~/.docker-java.properties
+
       # `verify` roda os testes unitários (surefire) e os de integração *IT (failsafe).
       # Os runners do GitHub já têm Docker, que o Testcontainers usa para subir o PostgreSQL.
       - name: Build e testes
