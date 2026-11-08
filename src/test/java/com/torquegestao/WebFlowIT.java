@@ -137,7 +137,9 @@ class WebFlowIT extends AbstractIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Histórico de status")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Registrar pagamento")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("/labor")));
+                // OS finalizada está encerrada: o formulário de mão de obra não deve ser exibido
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("/labor"))))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Esta OS está encerrada")));
 
         mvc.perform(post("/service-orders/" + order.id() + "/payments").with(user(admin)).with(csrf())
                         .param("amount", "40.00").param("method", "PIX"))
@@ -147,6 +149,16 @@ class WebFlowIT extends AbstractIntegrationTest {
         mvc.perform(get("/service-orders/" + order.id() + "/billing").with(user(admin)))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Pago parcialmente")));
+    }
+
+    @Test
+    void osAbertaMostraFormularioDeMaoDeObra() throws Exception {
+        AppUserDetails admin = principal(Role.ADMIN);
+        ServiceOrderResponse order = novaOs(admin, null);
+
+        mvc.perform(get("/service-orders/" + order.id() + "/billing").with(user(admin)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/labor")));
     }
 
     @Test
