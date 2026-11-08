@@ -63,6 +63,8 @@ app:
     enabled: ${SEED_ENABLED:true}
     admin-email: ${SEED_ADMIN_EMAIL:admin@torquegestao.com}
     admin-password: ${SEED_ADMIN_PASSWORD:}
+    demo-data: ${SEED_DEMO_DATA:false}
+    demo-password: ${SEED_DEMO_PASSWORD:}
 
 logging:
   level:

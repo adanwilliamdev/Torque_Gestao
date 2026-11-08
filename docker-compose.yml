@@ -40,6 +40,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:-troque-este-segredo-em-producao-para-uma-string-longa-e-aleatoria}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@torquegestao.com}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
+      SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:-}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:8080}
 
 volumes:

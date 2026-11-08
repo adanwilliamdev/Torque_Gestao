@@ -378,10 +378,18 @@ As configurações podem ser ajustadas sem alterar o código-fonte.
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:8080` | Origens autorizadas para a API. |
 | `SEED_ADMIN_EMAIL` | `admin@torquegestao.com` | E-mail do administrador inicial. |
 | `SEED_ADMIN_PASSWORD` | Vazio | Senha inicial do administrador. |
+| `SEED_DEMO_DATA` | `false` | Popula dados fictícios (clientes, veículos, peças, OS, orçamentos, pagamentos). |
+| `SEED_DEMO_PASSWORD` | Vazio | Senha das contas fictícias (recepção, gerente, mecânicos). Vazio = aleatória, exibida uma vez no log. |
 | `APP_TIMEZONE` | `America/Sao_Paulo` | Fuso horário da aplicação. |
 | `BUDGET_EXPIRATION_INTERVAL` | `PT15M` | Intervalo (ISO-8601) da rotina que expira orçamentos vencidos. |
 
 Em produção, configure `ENVIRONMENT=production`, utilize um `JWT_SECRET` forte com pelo menos 32 caracteres e defina uma senha inicial segura quando o seed do administrador for necessário.
+
+### Dados de demonstração
+
+Com `SEED_DEMO_DATA=true`, a primeira inicialização cria 12 clientes, 16 veículos, 17 peças (3 com estoque baixo), 4 mecânicos e 25 ordens de serviço em todos os estados do fluxo (criada, em diagnóstico, orçamento pendente/expirado/recusado, aprovada, em execução, finalizada com pagamento pendente/parcial/quitado e cancelada). Tudo é criado pelos serviços da aplicação, então estoque, histórico de status e pagamentos seguem as regras reais; apenas as datas são recuadas para dar movimento ao dashboard. O seed só roda se ainda não houver clientes e usa semente fixa (resultado reproduzível). Para recomeçar: `docker compose down -v` e suba novamente.
+
+Contas criadas: `recepcao@`, `gerente@` e `mecanico1@` a `mecanico3@torquegestao.com`.
 
 O access token possui validade padrão de 15 minutos. A renovação utiliza refresh tokens com validade de 7 dias e rotação.
 

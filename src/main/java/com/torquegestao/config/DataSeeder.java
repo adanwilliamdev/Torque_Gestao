@@ -7,12 +7,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import java.security.SecureRandom;
 import java.util.Base64;
 
 /** Cria o usuário administrador inicial, se ainda não existir ({@code app.seed.*}). */
 @Component
+@Order(1)
 public class DataSeeder implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DataSeeder.class);

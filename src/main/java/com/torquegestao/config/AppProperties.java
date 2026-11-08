@@ -43,6 +43,10 @@ public class AppProperties {
         private String adminEmail = "admin@torquegestao.com";
         /** Vazio = gera uma senha aleatória (só fora de produção) e a exibe uma única vez no log. */
         private String adminPassword = "";
+        /** Popula dados fictícios (clientes, veículos, peças, OS, orçamentos, pagamentos). Desligado por padrão. */
+        private boolean demoData = false;
+        /** Senha das contas fictícias (recepção, gerência, mecânicos). Vazio = aleatória, exibida uma vez no log. */
+        private String demoPassword = "";
     }
 
     @PostConstruct

@@ -151,7 +151,7 @@ class BudgetServiceTest {
     void pendenteVencidoJaApareceComoExpiradoNaLeitura() {
         Budget b = budget(BudgetStatus.PENDENTE, Instant.now().minusSeconds(60), null, "300.00");
 
-        assertEquals(BudgetStatus.EXPIRADO, BudgetResponse.from(b).status());
+        assertEquals(BudgetStatus.EXPIRADO, service.getResponse(budgetId).status());
         assertEquals(BudgetStatus.PENDENTE, b.getStatus(), "a leitura não altera o registro");
     }
 
